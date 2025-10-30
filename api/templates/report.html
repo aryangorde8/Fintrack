@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Financial Report</h2>
+
+<div class="card section fade-up">
+    <h3>📊 Summary</h3>
+    <p><strong>Total Income:</strong> ₹{{ summary.totalIncome }}</p>
+    <p><strong>Total Expenses:</strong> ₹{{ summary.totalExpenses }}</p>
+    <p><strong>Net Amount:</strong> ₹{{ summary.netAmount }}</p>
+</div>
+
+<h3>📈 Budget Analysis</h3>
+<div class="card section fade-up">
+  <table>
+      <tr>
+          <th>Category</th>
+          <th>Limit</th>
+          <th>Spent</th>
+          <th>Remaining</th>
+          <th>Utilization</th>
+      </tr>
+      {% for budget in budget_analysis %}
+      <tr>
+          <td>{{ budget.category }}</td>
+          <td>₹{{ budget.limit_amount }}</td>
+          <td>₹{{ budget.spent_amount }}</td>
+          <td>₹{{ budget.remaining }}</td>
+          <td>{{ budget.utilization_pct }}%</td>
+      </tr>
+      {% endfor %}
+  </table>
+  </div>
+
+<div class="section fade-up">
+    <a href="/api/web/download/csv/" class="btn success">Download CSV</a>
+    <a href="/api/web/download/pdf/" class="btn danger" style="margin-left:10px;">Download PDF</a>
+</div>
+{% endblock %}

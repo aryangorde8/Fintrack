@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Budget Management</h2>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-success fade-up">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+
+<form method="POST" class="section card fade-up">
+    {% csrf_token %}
+    <label>Category</label>
+    <input type="text" name="category" required placeholder="e.g., Food, Transport">
+    
+    <label>Budget Limit (₹)</label>
+    <input type="number" step="0.01" name="limit_amount" required>
+    
+    <label>Alert Threshold (%)</label>
+    <input type="number" name="alert_threshold" value="80" required>
+    
+    <div class="spacer-1"></div>
+    <button class="btn" type="submit">Create / Update Budget</button>
+  </form>
+
+<h3>Your Budgets</h3>
+<div class="card section fade-up">
+  <table>
+      <tr>
+          <th>Category</th>
+          <th>Limit</th>
+          <th>Spent</th>
+          <th>Remaining</th>
+          <th>Usage %</th>
+          <th>Status</th>
+      </tr>
+      {% for budget in budgets %}
+      <tr>
+          <td>{{ budget.category }}</td>
+          <td>₹{{ budget.limit_amount }}</td>
+          <td>₹{{ budget.spent_amount }}</td>
+          <td>₹{{ budget.remaining }}</td>
+          <td>{{ budget.percentage }}%</td>
+          <td>
+              {% if budget.percentage >= 100 %}
+                <span class="badge danger">Exceeded</span>
+              {% elif budget.percentage >= budget.alert_threshold %}
+                <span class="badge warn">Warning</span>
+              {% else %}
+                <span class="badge ok">OK</span>
+              {% endif %}
+          </td>
+      </tr>
+      {% endfor %}
+  </table>
+  </div>
+{% endblock %}

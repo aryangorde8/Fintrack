@@ -1,0 +1,13 @@
+Django>=5.2
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+gunicorn
+whitenoise
+Pillow
+reportlab
+requests
+PyJWT
+dj-database-url
+psycopg2-binary
+

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Dashboard</h2>
+<p class="muted">Welcome, {{ user.username }}!</p>
+
+<div class="grid-2 section stagger">
+    <div class="card kpi income raise">
+        <h3>💰 Total Income</h3>
+        <div class="value">₹{{ income_total }}</div>
+    </div>
+    <div class="card kpi expense raise">
+        <h3>💸 Total Expenses</h3>
+        <div class="value">₹{{ expense_total }}</div>
+    </div>
+</div>
+
+<div class="card section fade-up">
+    <h3>📊 Net Amount</h3>
+    <h2>₹{{ net_amount }}</h2>
+    <div class="spacer-1"></div>
+    <span class="badge {% if net_amount >= 0 %}ok{% else %}danger{% endif %}">
+        {% if net_amount >= 0 %}Healthy Balance{% else %}Overspending{% endif %}
+    </span>
+    <div class="spacer-1"></div>
+  </div>
+
+<h3>⚠️ Budget Status</h3>
+{% if budget_warnings %}
+  {% for warning in budget_warnings %}
+    <div class="alert alert-warning fade-up">{{ warning }}</div>
+  {% endfor %}
+{% else %}
+  <div class="alert alert-success fade-up">✓ All budgets are within limits</div>
+{% endif %}
+{% endblock %}

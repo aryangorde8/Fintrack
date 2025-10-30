@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.DS_Store
+
+# Environments
+venv/
+.env
+.env.*
+
+# Django
+/staticfiles/
+/media/
+*.log
+
+# SQLite (dev only)
+db.sqlite3
+
+# Reports and local artifacts
+fintrack-report.csv
+fintrack-report.pdf
+sent_emails/
+
+# VSCode
+.vscode/
+
