@@ -7,6 +7,7 @@ services:
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
       python manage.py migrate --noinput
+      if [ -n "$DJANGO_SUPERUSER_USERNAME" ]; then python manage.py createsuperuser --noinput; fi
     startCommand: gunicorn core.wsgi:application
     autoDeploy: true
     envVars:
@@ -15,8 +16,17 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: ALLOWED_HOSTS
-        value: ""
+        value: "fintrack-backend.onrender.com"
       - key: CSRF_TRUSTED_ORIGINS
+        value: "https://fintrack-backend.onrender.com"
+      - key: CORS_ALLOWED_ORIGINS
         value: ""
+      # For optional superuser creation on deploy
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: ""
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: ""
+      - key: DJANGO_SUPERUSER_PASSWORD
+        generateValue: true
       # Link a Render PostgreSQL and it will populate DATABASE_URL automatically.
 
