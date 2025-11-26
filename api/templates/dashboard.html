@@ -115,11 +115,19 @@
 <script>
 (function() {
   if (typeof Chart === 'undefined') { return; }
-  Chart.defaults.color = '#b0b0b0';
-  Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+  Chart.defaults.color = '#a0a0a0';
+  Chart.defaults.borderColor = 'rgba(0, 255, 157, 0.1)';
+  
   {% if has_trend_data %}
   const trendCtx = document.getElementById('trendChart');
   if (trendCtx) {
+    // Create gradient
+    const ctx = trendCtx.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(0, 255, 157, 0.4)');
+    gradient.addColorStop(0.5, 'rgba(0, 255, 157, 0.15)');
+    gradient.addColorStop(1, 'rgba(0, 255, 157, 0)');
+    
     new Chart(trendCtx, {
       type: 'line',
       data: {
@@ -128,30 +136,45 @@
           label: 'Daily Spending',
           data: {{ trend_values_json|safe }},
           tension: 0.4,
-          borderWidth: 2,
-          borderColor: '#4c9aff',
-          backgroundColor: 'rgba(76, 154, 255, 0.1)',
-          pointRadius: 0,
-          pointHoverRadius: 6,
-          pointHoverBackgroundColor: '#4c9aff',
+          borderWidth: 3,
+          borderColor: '#00ff9d',
+          backgroundColor: gradient,
+          pointRadius: 5,
+          pointHoverRadius: 10,
+          pointBackgroundColor: '#00ff9d',
+          pointBorderColor: '#000',
+          pointBorderWidth: 2,
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: '#00ff9d',
+          pointHoverBorderWidth: 3,
           fill: true,
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
         plugins: { 
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#1e1e1e',
-            padding: 12,
-            borderColor: '#4c9aff',
-            borderWidth: 1,
-            titleColor: '#fff',
-            bodyColor: '#b0b0b0',
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            padding: 16,
+            borderColor: '#00ff9d',
+            borderWidth: 2,
+            titleColor: '#00ff9d',
+            bodyColor: '#fff',
+            titleFont: { size: 14, weight: 'bold' },
+            bodyFont: { size: 14 },
+            displayColors: false,
             callbacks: {
+              title: function(context) {
+                return '📅 ' + context[0].label;
+              },
               label: function(context) {
-                return '₹' + context.parsed.y.toFixed(2);
+                return '💸 Spent: ₹' + context.parsed.y.toLocaleString();
               }
             }
           }
@@ -159,11 +182,24 @@
         scales: {
           x: { 
             grid: { display: false },
-            ticks: { color: '#808080' }
+            ticks: { 
+              color: '#a0a0a0',
+              font: { size: 12, weight: '500' }
+            }
           },
           y: { 
-            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-            ticks: { color: '#808080' }
+            beginAtZero: true,
+            grid: { 
+              color: 'rgba(0, 255, 157, 0.1)',
+              lineWidth: 1
+            },
+            ticks: { 
+              color: '#a0a0a0',
+              font: { size: 12 },
+              callback: function(value) {
+                return '₹' + value.toLocaleString();
+              }
+            }
           }
         }
       }
@@ -173,7 +209,15 @@
   {% if has_breakdown_data %}
   const breakdownCtx = document.getElementById('breakdownChart');
   if (breakdownCtx) {
-    const colors = ['#4c9aff', '#00d68f', '#ffbb33', '#ff4757', '#8e44ad', '#3498db'];
+    const colors = [
+      '#00d4ff',  // Cyan
+      '#00ff9d',  // Neon Green
+      '#ffd700',  // Gold
+      '#ff0066',  // Pink
+      '#9d4edd',  // Purple
+      '#ff6b35'   // Orange
+    ];
+    
     new Chart(breakdownCtx, {
       type: 'doughnut',
       data: {
@@ -181,39 +225,61 @@
         datasets: [{
           data: {{ breakdown_values_json|safe }},
           backgroundColor: colors,
-          borderColor: '#1e1e1e',
-          borderWidth: 2,
+          borderColor: '#000',
+          borderWidth: 4,
+          hoverBorderColor: '#fff',
+          hoverBorderWidth: 4,
+          hoverOffset: 15,
+          spacing: 2,
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: 10
+        },
         plugins: { 
           legend: { 
             position: 'bottom',
             labels: { 
-              color: '#b0b0b0',
-              padding: 16,
-              font: { size: 12 }
+              color: '#fff',
+              padding: 20,
+              font: { size: 13, weight: '600' },
+              usePointStyle: true,
+              pointStyle: 'rectRounded',
+              boxWidth: 15,
+              boxHeight: 15
             } 
           },
           tooltip: {
-            backgroundColor: '#1e1e1e',
-            padding: 12,
-            titleColor: '#fff',
-            bodyColor: '#b0b0b0',
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            padding: 18,
+            borderColor: '#00ff9d',
+            borderWidth: 2,
+            titleColor: '#00ff9d',
+            bodyColor: '#fff',
+            titleFont: { size: 15, weight: 'bold' },
+            bodyFont: { size: 14 },
+            displayColors: true,
+            boxWidth: 12,
+            boxHeight: 12,
+            boxPadding: 6,
             callbacks: {
+              title: function(context) {
+                return '🏷️ ' + context[0].label;
+              },
               label: function(context) {
-                const label = context.label || '';
-                const value = '₹' + context.parsed.toFixed(2);
+                const value = '₹' + context.parsed.toLocaleString();
                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
                 const percentage = ((context.parsed / total) * 100).toFixed(1) + '%';
-                return label + ': ' + value + ' (' + percentage + ')';
+                return '  💰 ' + value + ' (' + percentage + ')';
               }
             }
           }
         },
-        cutout: '65%'
+        cutout: '65%',
+        radius: '90%'
       }
     });
   }

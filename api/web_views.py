@@ -112,6 +112,10 @@ def dashboard(request):
         'breakdown_values_json': json.dumps(breakdown_values),
         'has_data': budgets.exists() or transactions.exists(),
     }
+    
+    # Debug print
+    print(f"DEBUG: trend_labels count = {len(trend_labels)}, breakdown_labels count = {len(breakdown_labels)}")
+    print(f"DEBUG: has_trend_data = {bool(trend_labels)}, has_breakdown_data = {bool(breakdown_labels)}")
 
     return render(request, 'dashboard.html', context)
 
