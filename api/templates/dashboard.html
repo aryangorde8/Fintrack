@@ -1,35 +1,224 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Dashboard</h2>
-<p class="muted">Welcome, {{ user.username }}!</p>
-
-<div class="grid-2 section stagger">
-    <div class="card kpi income raise">
-        <h3>💰 Total Income</h3>
-        <div class="value">₹{{ income_total }}</div>
-    </div>
-    <div class="card kpi expense raise">
-        <h3>💸 Total Expenses</h3>
-        <div class="value">₹{{ expense_total }}</div>
-    </div>
+<div class="fade-in">
+  <h1>Dashboard</h1>
+  <p class="muted">Welcome back, {{ user.username }}! Here's your financial overview.</p>
 </div>
 
-<div class="card section fade-up">
-    <h3>📊 Net Amount</h3>
-    <h2>₹{{ net_amount }}</h2>
-    <div class="spacer-1"></div>
-    <span class="badge {% if net_amount >= 0 %}ok{% else %}danger{% endif %}">
-        {% if net_amount >= 0 %}Healthy Balance{% else %}Overspending{% endif %}
-    </span>
-    <div class="spacer-1"></div>
+{% if not has_data %}
+<div class="card empty-state fade-up section">
+  <h3>🚀 Get Started</h3>
+  <p class="muted">Create budgets and add transactions to see your financial insights come to life.</p>
+  <div class="cta-row">
+    <a class="btn" href="{% url 'api:web-budgets' %}">Create Budget</a>
+    <a class="btn success" href="{% url 'api:web-transactions' %}">Add Transaction</a>
   </div>
+</div>
+{% endif %}
 
-<h3>⚠️ Budget Status</h3>
+<div class="grid-3 section stagger">
+  <div class="card kpi income">
+    <h3>💰 Total Income</h3>
+    <div class="value">₹{{ income_total|floatformat:2 }}</div>
+  </div>
+  <div class="card kpi expense">
+    <h3>💸 Total Expenses</h3>
+    <div class="value">₹{{ expense_total|floatformat:2 }}</div>
+  </div>
+  <div class="card kpi">
+    <h3>📊 Net Balance</h3>
+    <div class="value" style="color: {% if net_amount >= 0 %}var(--success){% else %}var(--danger){% endif %}">₹{{ net_amount|floatformat:2 }}</div>
+  </div>
+</div>
+
 {% if budget_warnings %}
-  {% for warning in budget_warnings %}
-    <div class="alert alert-warning fade-up">{{ warning }}</div>
-  {% endfor %}
-{% else %}
-  <div class="alert alert-success fade-up">✓ All budgets are within limits</div>
+<div class="section fade-up">
+  <h3 class="section-title">⚠️ Budget Alerts</h3>
+  <div class="card">
+    <ul class="warn-list">
+      {% for warning in budget_warnings %}
+      <li>{{ warning }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<div class="grid-2 section stagger">
+  <div class="card chart-card">
+    <h3 class="section-title">📈 Spending Trend (30 Days)</h3>
+    {% if has_trend_data %}
+      <canvas id="trendChart"></canvas>
+    {% else %}
+      <p class="empty-state">Add expenses to visualize your spending patterns</p>
+    {% endif %}
+  </div>
+  <div class="card chart-card">
+    <h3 class="section-title">🎯 Top Categories</h3>
+    {% if has_breakdown_data %}
+      <canvas id="breakdownChart"></canvas>
+    {% else %}
+      <p class="empty-state">Category breakdown appears after logging expenses</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2 section stagger">
+  <div class="card">
+    <h3 class="section-title">📁 Budget Overview</h3>
+    {% if budgets_summary %}
+      <ul class="insight-list">
+        {% for budget in budgets_summary|slice:':5' %}
+        <li>
+          <span>{{ budget.category }}</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="badge {% if budget.utilization_pct >= 100 %}danger{% elif budget.utilization_pct >= budget.alert_threshold %}warn{% else %}ok{% endif %}">
+              {{ budget.utilization_pct }}%
+            </span>
+            <strong>₹{{ budget.spent_amount|floatformat:0 }}/₹{{ budget.limit_amount|floatformat:0 }}</strong>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if budgets_summary|length > 5 %}
+        <div style="margin-top: 16px;">
+          <a class="inline" href="{% url 'api:web-budgets' %}">View all budgets →</a>
+        </div>
+      {% endif %}
+    {% else %}
+      <p class="empty-state">No budgets yet</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3 class="section-title">🧾 Recent Activity</h3>
+    {% if recent_transactions %}
+      <ul class="insight-list">
+        {% for tx in recent_transactions %}
+        <li>
+          <span>{{ tx.date|date:"M d, H:i" }} · {{ tx.category }}</span>
+          <strong style="color: {% if tx.type == 'expense' %}var(--danger){% else %}var(--success){% endif %}">
+            {% if tx.type == 'expense' %}-{% else %}+{% endif %}₹{{ tx.amount|floatformat:2 }}
+          </strong>
+        </li>
+        {% endfor %}
+      </ul>
+      <div style="margin-top: 16px;">
+        <a class="inline" href="{% url 'api:web-transactions' %}">View all transactions →</a>
+      </div>
+    {% else %}
+      <p class="empty-state">No transactions yet</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if has_trend_data or has_breakdown_data %}
+<script>
+(function() {
+  if (typeof Chart === 'undefined') { return; }
+  Chart.defaults.color = '#b0b0b0';
+  Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+  {% if has_trend_data %}
+  const trendCtx = document.getElementById('trendChart');
+  if (trendCtx) {
+    new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: {{ trend_labels_json|safe }},
+        datasets: [{
+          label: 'Daily Spending',
+          data: {{ trend_values_json|safe }},
+          tension: 0.4,
+          borderWidth: 2,
+          borderColor: '#4c9aff',
+          backgroundColor: 'rgba(76, 154, 255, 0.1)',
+          pointRadius: 0,
+          pointHoverRadius: 6,
+          pointHoverBackgroundColor: '#4c9aff',
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1e1e1e',
+            padding: 12,
+            borderColor: '#4c9aff',
+            borderWidth: 1,
+            titleColor: '#fff',
+            bodyColor: '#b0b0b0',
+            callbacks: {
+              label: function(context) {
+                return '₹' + context.parsed.y.toFixed(2);
+              }
+            }
+          }
+        },
+        scales: {
+          x: { 
+            grid: { display: false },
+            ticks: { color: '#808080' }
+          },
+          y: { 
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#808080' }
+          }
+        }
+      }
+    });
+  }
+  {% endif %}
+  {% if has_breakdown_data %}
+  const breakdownCtx = document.getElementById('breakdownChart');
+  if (breakdownCtx) {
+    const colors = ['#4c9aff', '#00d68f', '#ffbb33', '#ff4757', '#8e44ad', '#3498db'];
+    new Chart(breakdownCtx, {
+      type: 'doughnut',
+      data: {
+        labels: {{ breakdown_labels_json|safe }},
+        datasets: [{
+          data: {{ breakdown_values_json|safe }},
+          backgroundColor: colors,
+          borderColor: '#1e1e1e',
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { 
+          legend: { 
+            position: 'bottom',
+            labels: { 
+              color: '#b0b0b0',
+              padding: 16,
+              font: { size: 12 }
+            } 
+          },
+          tooltip: {
+            backgroundColor: '#1e1e1e',
+            padding: 12,
+            titleColor: '#fff',
+            bodyColor: '#b0b0b0',
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = '₹' + context.parsed.toFixed(2);
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((context.parsed / total) * 100).toFixed(1) + '%';
+                return label + ': ' + value + ' (' + percentage + ')';
+              }
+            }
+          }
+        },
+        cutout: '65%'
+      }
+    });
+  }
+  {% endif %}
+})();
+</script>
 {% endif %}
 {% endblock %}

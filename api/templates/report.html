@@ -4,13 +4,14 @@
 
 <div class="card section fade-up">
     <h3>📊 Summary</h3>
-    <p><strong>Total Income:</strong> ₹{{ summary.totalIncome }}</p>
-    <p><strong>Total Expenses:</strong> ₹{{ summary.totalExpenses }}</p>
-    <p><strong>Net Amount:</strong> ₹{{ summary.netAmount }}</p>
+    <p><strong>Total Income:</strong> ₹{{ summary.totalIncome|floatformat:2 }}</p>
+    <p><strong>Total Expenses:</strong> ₹{{ summary.totalExpenses|floatformat:2 }}</p>
+    <p><strong>Net Amount:</strong> ₹{{ summary.netAmount|floatformat:2 }}</p>
 </div>
 
 <h3>📈 Budget Analysis</h3>
 <div class="card section fade-up">
+  {% if budget_analysis %}
   <table>
       <tr>
           <th>Category</th>
@@ -22,13 +23,16 @@
       {% for budget in budget_analysis %}
       <tr>
           <td>{{ budget.category }}</td>
-          <td>₹{{ budget.limit_amount }}</td>
-          <td>₹{{ budget.spent_amount }}</td>
-          <td>₹{{ budget.remaining }}</td>
+          <td>₹{{ budget.limit_amount|floatformat:2 }}</td>
+          <td>₹{{ budget.spent_amount|floatformat:2 }}</td>
+          <td>₹{{ budget.remaining|floatformat:2 }}</td>
           <td>{{ budget.utilization_pct }}%</td>
       </tr>
       {% endfor %}
   </table>
+  {% else %}
+    <p class="muted empty-state">Add budgets and transactions to generate an analysis.</p>
+  {% endif %}
   </div>
 
 <div class="section fade-up">

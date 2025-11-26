@@ -8,13 +8,54 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <style>
-      body { background: radial-gradient(700px 400px at 80% -10%, #2b3465 0%, rgba(17, 23, 42, 0) 60%), linear-gradient(135deg, #667eea 0%, #764ba2 100%); display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
-      .auth-card { width: 360px; }
+      body { 
+        background: #000000; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        height: 100vh; 
+        margin: 0;
+        padding: 20px;
+      }
+      .login-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+      }
+      .shell {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        padding: 40px;
+      }
+      .auth-card { 
+        width: 420px;
+        max-width: 100%;
+        animation: floatIn .4s ease both;
+      }
+      @keyframes floatIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .auth-card h1 {
+        margin-bottom: 8px;
+        background: none;
+        -webkit-text-fill-color: initial;
+        color: var(--primary);
+        text-shadow: var(--primary-glow);
+      }
+      .auth-card p {
+        margin-bottom: 28px;
+      }
+      .auth-card label {
+        display: block;
+        text-align: left;
+      }
     </style>
   </head>
 <body>
-    <div class="container" style="max-width: none; margin: 0; padding: 0 20px;">
-      <div class="shell card auth-card fade-up" style="margin: 0 auto;">
+    <div class="login-container">
+      <div class="shell card auth-card">
           <h1 style="text-align:center;">🏦 FinTrack</h1>
           <p class="muted" style="text-align:center;">Login or Register</p>
           <form method="POST">

@@ -13,13 +13,14 @@
         <div class="shell">
             <h1>🏦 FinTrack</h1>
             <div class="nav">
-                <a href="/api/web/dashboard/">Dashboard</a>
-                <a href="/api/web/budgets/">Budgets</a>
-                <a href="/api/web/transactions/">Transactions</a>
-                <a href="/api/web/report/">Report</a>
+                <a href="{% url 'api:web-dashboard' %}" class="{% if request.path == '/api/web/dashboard/' %}active{% endif %}">Dashboard</a>
+                <a href="{% url 'api:web-budgets' %}" class="{% if request.path == '/api/web/budgets/' %}active{% endif %}">Budgets</a>
+                <a href="{% url 'api:web-transactions' %}" class="{% if request.path == '/api/web/transactions/' %}active{% endif %}">Transactions</a>
+                <a href="{% url 'api:web-report' %}" class="{% if request.path == '/api/web/report/' %}active{% endif %}">Report</a>
             </div>
             {% block content %}{% endblock %}
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </body>
 </html>

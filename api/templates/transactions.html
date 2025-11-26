@@ -2,9 +2,19 @@
 {% block content %}
 <h2>Transactions</h2>
 
+<!-- Budget Alert Popup -->
+<div class="popup-overlay" id="budgetAlertPopup">
+  <div class="popup-modal">
+    <div class="icon">⚠️</div>
+    <h2>Budget Limit Exceeded!</h2>
+    <p id="budgetAlertMessage"></p>
+    <button class="btn danger" onclick="closePopup()">Got It</button>
+  </div>
+</div>
+
 {% if messages %}
   {% for message in messages %}
-    <div class="alert alert-{% if 'warning' in message.tags %}warning{% else %}success{% endif %} fade-up">{{ message }}</div>
+    <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'warning' in message.tags %}alert-warning{% else %}alert-success{% endif %} fade-up">{{ message }}</div>
   {% endfor %}
 {% endif %}
 
@@ -25,12 +35,6 @@
     <label>Description</label>
     <textarea name="description" rows="3"></textarea>
     
-    <label>Phone Number (for SMS alerts, optional)</label>
-    <input type="tel" name="phone_number" placeholder="+919890534664">
-    
-    <label>Email (for email alerts, optional)</label>
-    <input type="email" name="email" placeholder="aryangorde8@gmail.com">
-    
     <div class="spacer-1"></div>
     <button class="btn" type="submit">Add Transaction</button>
   </form>
@@ -50,10 +54,39 @@
           <td>{{ tx.date|date:"Y-m-d H:i" }}</td>
           <td>{{ tx.type|upper }}</td>
           <td>{{ tx.category }}</td>
-          <td>₹{{ tx.amount }}</td>
+            <td>₹{{ tx.amount|floatformat:2 }}</td>
           <td>{{ tx.description }}</td>
       </tr>
       {% endfor %}
   </table>
   </div>
+
+<script>
+  // Check for budget warning messages and show popup
+  document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert-warning');
+    alerts.forEach(alert => {
+      const message = alert.textContent.trim();
+      if (message.includes('budget used') || message.includes('Budget alert')) {
+        showBudgetPopup(message);
+      }
+    });
+  });
+
+  function showBudgetPopup(message) {
+    document.getElementById('budgetAlertMessage').textContent = message;
+    document.getElementById('budgetAlertPopup').classList.add('show');
+  }
+
+  function closePopup() {
+    document.getElementById('budgetAlertPopup').classList.remove('show');
+  }
+
+  // Close popup when clicking outside
+  document.getElementById('budgetAlertPopup').addEventListener('click', function(e) {
+    if (e.target === this) {
+      closePopup();
+    }
+  });
+</script>
 {% endblock %}

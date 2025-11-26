@@ -4,7 +4,7 @@
 
 {% if messages %}
   {% for message in messages %}
-    <div class="alert alert-success fade-up">{{ message }}</div>
+    <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'warning' in message.tags %}alert-warning{% else %}alert-success{% endif %} fade-up">{{ message }}</div>
   {% endfor %}
 {% endif %}
 
@@ -25,6 +25,7 @@
 
 <h3>Your Budgets</h3>
 <div class="card section fade-up">
+  {% if budgets %}
   <table>
       <tr>
           <th>Category</th>
@@ -37,9 +38,9 @@
       {% for budget in budgets %}
       <tr>
           <td>{{ budget.category }}</td>
-          <td>₹{{ budget.limit_amount }}</td>
-          <td>₹{{ budget.spent_amount }}</td>
-          <td>₹{{ budget.remaining }}</td>
+          <td>₹{{ budget.limit_amount|floatformat:2 }}</td>
+          <td>₹{{ budget.spent_amount|floatformat:2 }}</td>
+          <td>₹{{ budget.remaining|floatformat:2 }}</td>
           <td>{{ budget.percentage }}%</td>
           <td>
               {% if budget.percentage >= 100 %}
@@ -53,5 +54,8 @@
       </tr>
       {% endfor %}
   </table>
+  {% else %}
+    <p class="muted empty-state">No budgets yet. Start by creating your first category budget above.</p>
+  {% endif %}
   </div>
 {% endblock %}
