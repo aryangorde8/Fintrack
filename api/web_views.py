@@ -1,4 +1,7 @@
 import json
+import base64
+import os
+import re
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -8,12 +11,117 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.db.models import Sum, Q
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from django.conf import settings
 
 from .models import Budget, Transaction, Notification
+
+# AI Receipt Scanning
+def scan_receipt_with_ai(image_data):
+    """
+    Scan receipt image using Google Gemini AI to extract transaction data.
+    Falls back to a demo mode if API key is not configured.
+    """
+    try:
+        import google.generativeai as genai
+        
+        # Use API key from Django settings
+        api_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
+        
+        if not api_key:
+            # Demo mode - return sample data for testing
+            return {
+                'success': True,
+                'demo_mode': True,
+                'data': {
+                    'amount': '299.00',
+                    'category': 'Shopping',
+                    'description': 'Demo: Sample transaction from receipt scan',
+                    'type': 'expense'
+                }
+            }
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        # Create prompt for receipt extraction
+        prompt = """Analyze this receipt/transaction screenshot and extract the following information in JSON format:
+        {
+            "amount": "total amount as a number (e.g., 299.50)",
+            "category": "best category guess from: Food, Shopping, Transportation, Entertainment, Utilities, Healthcare, Education, Other",
+            "description": "brief description of the transaction/items",
+            "type": "expense or income"
+        }
+        
+        If you cannot identify a field, use null. Only return the JSON, nothing else.
+        Focus on the TOTAL amount, not individual items."""
+        
+        # Decode base64 image
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        image_bytes = base64.b64decode(image_data)
+        
+        response = model.generate_content([
+            prompt,
+            {'mime_type': 'image/jpeg', 'data': image_bytes}
+        ])
+        
+        # Parse response
+        response_text = response.text.strip()
+        # Remove markdown code blocks if present
+        if response_text.startswith('```'):
+            response_text = re.sub(r'^```json?\s*', '', response_text)
+            response_text = re.sub(r'\s*```$', '', response_text)
+        
+        data = json.loads(response_text)
+        
+        return {
+            'success': True,
+            'demo_mode': False,
+            'data': data
+        }
+        
+    except ImportError:
+        return {
+            'success': True,
+            'demo_mode': True,
+            'data': {
+                'amount': '150.00',
+                'category': 'Food',
+                'description': 'Demo mode: Install google-generativeai for AI scanning',
+                'type': 'expense'
+            }
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@csrf_exempt
+@login_required(login_url='/api/web/login/')
+def scan_receipt(request):
+    """Handle receipt image upload and AI scanning."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'})
+    
+    try:
+        data = json.loads(request.body)
+        image_data = data.get('image')
+        
+        if not image_data:
+            return JsonResponse({'success': False, 'error': 'No image provided'})
+        
+        result = scan_receipt_with_ai(image_data)
+        return JsonResponse(result)
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 @csrf_exempt
 def login_view(request):

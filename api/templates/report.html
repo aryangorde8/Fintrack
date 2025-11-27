@@ -1,42 +1,107 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Financial Report</h2>
-
-<div class="card section fade-up">
-    <h3>📊 Summary</h3>
-    <p><strong>Total Income:</strong> ₹{{ summary.totalIncome|floatformat:2 }}</p>
-    <p><strong>Total Expenses:</strong> ₹{{ summary.totalExpenses|floatformat:2 }}</p>
-    <p><strong>Net Amount:</strong> ₹{{ summary.netAmount|floatformat:2 }}</p>
+<div class="page-header fade-in">
+  <div class="header-content">
+    <h1 class="page-title">Financial Report</h1>
+    <p class="page-subtitle">Comprehensive analysis of your finances</p>
+  </div>
 </div>
 
-<h3>📈 Budget Analysis</h3>
-<div class="card section fade-up">
-  {% if budget_analysis %}
-  <table>
-      <tr>
-          <th>Category</th>
-          <th>Limit</th>
-          <th>Spent</th>
-          <th>Remaining</th>
-          <th>Utilization</th>
-      </tr>
-      {% for budget in budget_analysis %}
-      <tr>
-          <td>{{ budget.category }}</td>
-          <td>₹{{ budget.limit_amount|floatformat:2 }}</td>
-          <td>₹{{ budget.spent_amount|floatformat:2 }}</td>
-          <td>₹{{ budget.remaining|floatformat:2 }}</td>
-          <td>{{ budget.utilization_pct }}%</td>
-      </tr>
-      {% endfor %}
-  </table>
-  {% else %}
-    <p class="muted empty-state">Add budgets and transactions to generate an analysis.</p>
-  {% endif %}
+<div class="report-summary fade-up">
+  <div class="glass-card summary-card">
+    <div class="summary-header">
+      <span class="summary-icon">📊</span>
+      <h3>Financial Summary</h3>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-item income">
+        <span class="summary-label">Total Income</span>
+        <span class="summary-value">₹{{ summary.totalIncome|floatformat:2 }}</span>
+      </div>
+      <div class="summary-item expense">
+        <span class="summary-label">Total Expenses</span>
+        <span class="summary-value">₹{{ summary.totalExpenses|floatformat:2 }}</span>
+      </div>
+      <div class="summary-item {% if summary.netAmount >= 0 %}positive{% else %}negative{% endif %}">
+        <span class="summary-label">Net Balance</span>
+        <span class="summary-value">₹{{ summary.netAmount|floatformat:2 }}</span>
+      </div>
+    </div>
   </div>
+</div>
 
-<div class="section fade-up">
-    <a href="/api/web/download/csv/" class="btn success">Download CSV</a>
-    <a href="/api/web/download/pdf/" class="btn danger" style="margin-left:10px;">Download PDF</a>
+<div class="table-section fade-up">
+  <div class="glass-card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="title-icon">📈</span>
+        <h3>Budget Analysis</h3>
+      </div>
+    </div>
+    
+    {% if budget_analysis %}
+    <div class="table-wrapper">
+      <table class="premium-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Limit</th>
+            <th>Spent</th>
+            <th>Remaining</th>
+            <th>Utilization</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for budget in budget_analysis %}
+          <tr>
+            <td><span class="category-cell">{{ budget.category }}</span></td>
+            <td>₹{{ budget.limit_amount|floatformat:2 }}</td>
+            <td>₹{{ budget.spent_amount|floatformat:2 }}</td>
+            <td>
+              <span class="{% if budget.remaining < 0 %}text-danger{% else %}text-success{% endif %}">
+                ₹{{ budget.remaining|floatformat:2 }}
+              </span>
+            </td>
+            <td>
+              <div class="utilization-cell">
+                <div class="mini-progress">
+                  <div class="mini-progress-fill {% if budget.utilization_pct >= 100 %}danger{% elif budget.utilization_pct >= 80 %}warning{% else %}success{% endif %}" style="width: min(100%, {{ budget.utilization_pct }}%)"></div>
+                </div>
+                <span class="utilization-value {% if budget.utilization_pct >= 100 %}danger{% elif budget.utilization_pct >= 80 %}warning{% else %}success{% endif %}">{{ budget.utilization_pct }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state-small">
+      <span>📈</span>
+      <p>Add budgets and transactions to generate an analysis.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="export-section fade-up">
+  <div class="glass-card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="title-icon">📥</span>
+        <h3>Export Data</h3>
+      </div>
+    </div>
+    <div class="export-buttons">
+      <a href="/api/web/download/csv/" class="btn btn-success btn-export">
+        <span class="btn-icon">📊</span>
+        <span class="btn-text">Download CSV</span>
+      </a>
+      <a href="/api/web/download/pdf/" class="btn btn-danger btn-export">
+        <span class="btn-icon">📄</span>
+        <span class="btn-text">Download PDF</span>
+      </a>
+    </div>
+  </div>
 </div>
 {% endblock %}

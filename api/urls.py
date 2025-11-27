@@ -5,7 +5,10 @@ from .views import (
     BudgetListCreateView, TransactionListCreateView,
     ReportSummaryView, ExportCSVView, ExportPDFView
 )
-from .web_views import login_view, dashboard, budgets_view, transactions_view, report_view, download_csv, download_pdf
+from .web_views import (
+    login_view, dashboard, budgets_view, transactions_view, 
+    report_view, download_csv, download_pdf, scan_receipt
+)
 
 app_name = 'api'
 
@@ -29,4 +32,5 @@ urlpatterns = [
     path('web/report/', report_view, name='web-report'),
     path('web/download/csv/', download_csv, name='web-download-csv'),
     path('web/download/pdf/', download_pdf, name='web-download-pdf'),
+    path('web/scan-receipt/', scan_receipt, name='web-scan-receipt'),
 ]

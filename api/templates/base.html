@@ -4,23 +4,60 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>FinTrack</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>FinTrack - Premium Finance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <div class="container fade-in">
-        <div class="shell">
-            <h1>🏦 FinTrack</h1>
-            <div class="nav">
-                <a href="{% url 'api:web-dashboard' %}" class="{% if request.path == '/api/web/dashboard/' %}active{% endif %}">Dashboard</a>
-                <a href="{% url 'api:web-budgets' %}" class="{% if request.path == '/api/web/budgets/' %}active{% endif %}">Budgets</a>
-                <a href="{% url 'api:web-transactions' %}" class="{% if request.path == '/api/web/transactions/' %}active{% endif %}">Transactions</a>
-                <a href="{% url 'api:web-report' %}" class="{% if request.path == '/api/web/report/' %}active{% endif %}">Report</a>
+    <!-- Background orbs for premium effect -->
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    
+    <div class="app-container">
+        <!-- Premium Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">💎</div>
+                <div class="brand-text">
+                    <span class="brand-name">FinTrack</span>
+                    <span class="brand-tagline">Premium</span>
+                </div>
             </div>
-            {% block content %}{% endblock %}
-        </div>
+            
+            <nav class="sidebar-nav">
+                <a href="{% url 'api:web-dashboard' %}" class="nav-item {% if request.path == '/api/web/dashboard/' %}active{% endif %}">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="{% url 'api:web-budgets' %}" class="nav-item {% if request.path == '/api/web/budgets/' %}active{% endif %}">
+                    <span class="nav-icon">💰</span>
+                    <span class="nav-text">Budgets</span>
+                </a>
+                <a href="{% url 'api:web-transactions' %}" class="nav-item {% if request.path == '/api/web/transactions/' %}active{% endif %}">
+                    <span class="nav-icon">💳</span>
+                    <span class="nav-text">Transactions</span>
+                </a>
+                <a href="{% url 'api:web-report' %}" class="nav-item {% if request.path == '/api/web/report/' %}active{% endif %}">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-text">Report</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <a href="{% url 'api:web-login' %}" class="nav-item logout">
+                    <span class="nav-icon">🚪</span>
+                    <span class="nav-text">Logout</span>
+                </a>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-wrapper fade-in">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
     </div>
 </body>
 </html>

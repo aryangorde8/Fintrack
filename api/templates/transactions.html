@@ -1,70 +1,225 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Transactions</h2>
+<div class="page-header fade-in">
+  <div class="header-content">
+    <h1 class="page-title">Transactions</h1>
+    <p class="page-subtitle">Track your income and expenses with AI-powered receipt scanning</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ai" onclick="openScanModal()">
+      <span class="btn-icon">🤖</span>
+      <span>AI Scan Receipt</span>
+    </button>
+  </div>
+</div>
+
+<!-- AI Scanner Modal -->
+<div class="modal-overlay" id="scanModal">
+  <div class="modal-container glass-card">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="ai-badge">🤖 AI Powered</span>
+        <h2>Smart Receipt Scanner</h2>
+        <p>Upload a receipt or transaction screenshot to automatically extract details</p>
+      </div>
+      <button class="modal-close" onclick="closeScanModal()">×</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-content">
+          <div class="upload-icon">📷</div>
+          <h3>Drop your receipt here</h3>
+          <p>or click to browse files</p>
+          <span class="upload-formats">Supports: JPG, PNG, WEBP</span>
+        </div>
+        <input type="file" id="receiptInput" accept="image/*" hidden>
+      </div>
+      
+      <div class="preview-zone hidden" id="previewZone">
+        <img id="previewImage" src="" alt="Receipt preview">
+        <button class="btn btn-secondary btn-sm" onclick="clearPreview()">
+          <span>🔄</span> Choose Different Image
+        </button>
+      </div>
+      
+      <div class="scan-result hidden" id="scanResult">
+        <div class="result-header">
+          <span class="result-icon">✨</span>
+          <h3>Extracted Data</h3>
+        </div>
+        <div class="result-fields">
+          <div class="result-field">
+            <label>Amount</label>
+            <span id="resultAmount">-</span>
+          </div>
+          <div class="result-field">
+            <label>Category</label>
+            <span id="resultCategory">-</span>
+          </div>
+          <div class="result-field">
+            <label>Description</label>
+            <span id="resultDescription">-</span>
+          </div>
+          <div class="result-field">
+            <label>Type</label>
+            <span id="resultType">-</span>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="btn btn-primary" type="button" id="applyBtn" style="pointer-events: auto; cursor: pointer;">
+            <span>✓</span> Apply to Form
+          </button>
+          <button class="btn btn-secondary" type="button" onclick="closeScanModal()" style="pointer-events: auto; cursor: pointer;">Cancel</button>
+        </div>
+      </div>
+      
+      <div class="scan-loading hidden" id="scanLoading">
+        <div class="loading-spinner"></div>
+        <p>AI is analyzing your receipt...</p>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-lg" id="scanBtn" onclick="scanReceipt()" disabled>
+        <span>🔍</span> Scan with AI
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Budget Alert Popup -->
 <div class="popup-overlay" id="budgetAlertPopup">
-  <div class="popup-modal">
-    <div class="icon">⚠️</div>
+  <div class="popup-modal glass-card">
+    <div class="popup-icon warning">⚠️</div>
     <h2>Budget Limit Exceeded!</h2>
     <p id="budgetAlertMessage"></p>
-    <button class="btn danger" onclick="closePopup()">Got It</button>
+    <button class="btn btn-danger" onclick="closePopup()">Got It</button>
   </div>
 </div>
 
 {% if messages %}
   {% for message in messages %}
-    <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'warning' in message.tags %}alert-warning{% else %}alert-success{% endif %} fade-up">{{ message }}</div>
+    <div class="alert-banner {% if 'error' in message.tags %}error{% elif 'warning' in message.tags %}warning{% else %}success{% endif %} fade-up">
+      <span class="alert-icon">{% if 'error' in message.tags %}❌{% elif 'warning' in message.tags %}⚠️{% else %}✅{% endif %}</span>
+      {{ message }}
+    </div>
   {% endfor %}
 {% endif %}
 
-<form method="POST" class="section card fade-up">
-    {% csrf_token %}
-    <label>Type</label>
-    <select name="type" required>
-        <option value="expense">Expense</option>
-        <option value="income">Income</option>
-    </select>
-    
-    <label>Amount (₹)</label>
-    <input type="number" step="0.01" name="amount" required>
-    
-    <label>Category</label>
-    <input type="text" name="category" required>
-    
-    <label>Description</label>
-    <textarea name="description" rows="3"></textarea>
-    
-    <div class="spacer-1"></div>
-    <button class="btn" type="submit">Add Transaction</button>
-  </form>
-
-<h3>Recent Transactions</h3>
-<div class="card section fade-up">
-  <table>
-      <tr>
-          <th>Date</th>
-          <th>Type</th>
-          <th>Category</th>
-          <th>Amount</th>
-          <th>Description</th>
-      </tr>
-      {% for tx in transactions %}
-      <tr>
-          <td>{{ tx.date|date:"Y-m-d H:i" }}</td>
-          <td>{{ tx.type|upper }}</td>
-          <td>{{ tx.category }}</td>
-            <td>₹{{ tx.amount|floatformat:2 }}</td>
-          <td>{{ tx.description }}</td>
-      </tr>
-      {% endfor %}
-  </table>
+<div class="form-section fade-up">
+  <div class="glass-card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="title-icon">➕</span>
+        <h3>Add Transaction</h3>
+      </div>
+      <span class="card-badge pro-badge">
+        <span>✨</span> AI Ready
+      </span>
+    </div>
+    <form method="POST" class="premium-form" id="transactionForm">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Transaction Type</label>
+          <div class="select-wrapper">
+            <select name="type" id="txType" required>
+              <option value="expense">💸 Expense</option>
+              <option value="income">💰 Income</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Amount (₹)</label>
+          <input type="number" step="0.01" name="amount" id="txAmount" placeholder="Enter amount" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Category</label>
+          <input type="text" name="category" id="txCategory" placeholder="e.g., Food, Salary, Shopping" required>
+        </div>
+        
+        <div class="form-group full-width">
+          <label>Description</label>
+          <textarea name="description" id="txDescription" rows="2" placeholder="Optional notes about this transaction"></textarea>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button class="btn btn-primary btn-lg" type="submit">
+          <span>➕</span> Add Transaction
+        </button>
+        <button type="button" class="btn btn-ai-secondary" onclick="openScanModal()">
+          <span>🤖</span> Scan Receipt Instead
+        </button>
+      </div>
+    </form>
   </div>
+</div>
+
+<div class="table-section fade-up">
+  <div class="glass-card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="title-icon">🧾</span>
+        <h3>Recent Transactions</h3>
+      </div>
+      <span class="card-badge">{{ transactions|length }} entries</span>
+    </div>
+    
+    {% if transactions %}
+    <div class="table-wrapper">
+      <table class="premium-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Amount</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in transactions %}
+          <tr class="table-row-animate">
+            <td>
+              <span class="date-cell">{{ tx.date|date:"M d, Y" }}</span>
+              <span class="time-cell">{{ tx.date|date:"H:i" }}</span>
+            </td>
+            <td>
+              <span class="type-badge {% if tx.type == 'expense' %}expense{% else %}income{% endif %}">
+                {% if tx.type == 'expense' %}💸{% else %}💰{% endif %} {{ tx.type|upper }}
+              </span>
+            </td>
+            <td><span class="category-cell">{{ tx.category }}</span></td>
+            <td>
+              <span class="amount-cell {% if tx.type == 'expense' %}expense{% else %}income{% endif %}">
+                {% if tx.type == 'expense' %}-{% else %}+{% endif %}₹{{ tx.amount|floatformat:2 }}
+              </span>
+            </td>
+            <td><span class="desc-cell">{{ tx.description|default:"-" }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state-small">
+      <span>🧾</span>
+      <p>No transactions yet. Add your first transaction above!</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
 
 <script>
-  // Check for budget warning messages and show popup
+  let scannedData = null;
+  
+  // Budget popup handling
   document.addEventListener('DOMContentLoaded', function() {
-    const alerts = document.querySelectorAll('.alert-warning');
+    const alerts = document.querySelectorAll('.alert-banner.warning');
     alerts.forEach(alert => {
       const message = alert.textContent.trim();
       if (message.includes('budget used') || message.includes('Budget alert')) {
@@ -82,10 +237,167 @@
     document.getElementById('budgetAlertPopup').classList.remove('show');
   }
 
-  // Close popup when clicking outside
   document.getElementById('budgetAlertPopup').addEventListener('click', function(e) {
-    if (e.target === this) {
-      closePopup();
+    if (e.target === this) closePopup();
+  });
+  
+  // AI Scanner functions
+  function openScanModal() {
+    document.getElementById('scanModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function closeScanModal() {
+    document.getElementById('scanModal').classList.remove('show');
+    document.body.style.overflow = '';
+    clearPreview();
+  }
+  
+  document.getElementById('scanModal').addEventListener('click', function(e) {
+    if (e.target === this) closeScanModal();
+  });
+  
+  // Upload zone handling
+  const uploadZone = document.getElementById('uploadZone');
+  const receiptInput = document.getElementById('receiptInput');
+  const previewZone = document.getElementById('previewZone');
+  const previewImage = document.getElementById('previewImage');
+  const scanBtn = document.getElementById('scanBtn');
+  
+  uploadZone.addEventListener('click', () => receiptInput.click());
+  
+  uploadZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadZone.classList.add('dragover');
+  });
+  
+  uploadZone.addEventListener('dragleave', () => {
+    uploadZone.classList.remove('dragover');
+  });
+  
+  uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+  
+  receiptInput.addEventListener('change', (e) => {
+    if (e.target.files.length) {
+      handleFile(e.target.files[0]);
+    }
+  });
+  
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImage.src = e.target.result;
+      uploadZone.classList.add('hidden');
+      previewZone.classList.remove('hidden');
+      scanBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+  }
+  
+  function clearPreview() {
+    previewImage.src = '';
+    uploadZone.classList.remove('hidden');
+    previewZone.classList.add('hidden');
+    document.getElementById('scanResult').classList.add('hidden');
+    document.getElementById('scanLoading').classList.add('hidden');
+    scanBtn.disabled = true;
+    scannedData = null;
+    receiptInput.value = '';
+  }
+  
+  async function scanReceipt() {
+    const imageData = previewImage.src;
+    if (!imageData) return;
+    
+    document.getElementById('scanLoading').classList.remove('hidden');
+    document.getElementById('scanResult').classList.add('hidden');
+    scanBtn.disabled = true;
+    
+    try {
+      const response = await fetch('/api/web/scan-receipt/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({ image: imageData })
+      });
+      
+      const result = await response.json();
+      
+      document.getElementById('scanLoading').classList.add('hidden');
+      
+      if (result.success) {
+        scannedData = result.data;
+        
+        document.getElementById('resultAmount').textContent = '₹' + (result.data.amount || '-');
+        document.getElementById('resultCategory').textContent = result.data.category || '-';
+        document.getElementById('resultDescription').textContent = result.data.description || '-';
+        document.getElementById('resultType').textContent = (result.data.type || 'expense').toUpperCase();
+        
+        document.getElementById('scanResult').classList.remove('hidden');
+        
+        if (result.demo_mode) {
+          alert('📌 Demo Mode: Set GEMINI_API_KEY environment variable for real AI scanning.');
+        }
+      } else {
+        alert('Scan failed: ' + (result.error || 'Unknown error'));
+        scanBtn.disabled = false;
+      }
+    } catch (error) {
+      document.getElementById('scanLoading').classList.add('hidden');
+      alert('Error: ' + error.message);
+      scanBtn.disabled = false;
+    }
+  }
+  
+  function applyScannedData() {
+    if (!scannedData) {
+      alert('No scanned data available');
+      return;
+    }
+    
+    // Fill the form
+    if (scannedData.amount) {
+      const amt = parseFloat(String(scannedData.amount).replace(/[^0-9.]/g, '')) || '';
+      document.getElementById('txAmount').value = amt;
+    }
+    if (scannedData.category) {
+      document.getElementById('txCategory').value = scannedData.category;
+    }
+    if (scannedData.description) {
+      document.getElementById('txDescription').value = scannedData.description;
+    }
+    if (scannedData.type) {
+      document.getElementById('txType').value = scannedData.type.toLowerCase();
+    }
+    
+    closeScanModal();
+    
+    // Directly submit the form
+    document.getElementById('transactionForm').submit();
+  }
+  
+  // Add click listener after DOM loads
+  document.addEventListener('DOMContentLoaded', function() {
+    const applyBtn = document.getElementById('applyBtn');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        applyScannedData();
+      });
     }
   });
 </script>

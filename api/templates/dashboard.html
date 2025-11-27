@@ -1,112 +1,188 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="fade-in">
-  <h1>Dashboard</h1>
-  <p class="muted">Welcome back, {{ user.username }}! Here's your financial overview.</p>
+<div class="page-header fade-in">
+  <div class="header-content">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Welcome back, <span class="highlight">{{ user.username }}</span>! Here's your financial overview.</p>
+  </div>
+  <div class="header-badge">
+    <span class="live-indicator"></span>
+    Live Data
+  </div>
 </div>
 
 {% if not has_data %}
-<div class="card empty-state fade-up section">
-  <h3>🚀 Get Started</h3>
-  <p class="muted">Create budgets and add transactions to see your financial insights come to life.</p>
-  <div class="cta-row">
-    <a class="btn" href="{% url 'api:web-budgets' %}">Create Budget</a>
-    <a class="btn success" href="{% url 'api:web-transactions' %}">Add Transaction</a>
+<div class="glass-card empty-hero fade-up">
+  <div class="empty-icon">🚀</div>
+  <h2>Get Started with FinTrack</h2>
+  <p>Create budgets and add transactions to see your financial insights come to life.</p>
+  <div class="cta-group">
+    <a class="btn btn-primary" href="{% url 'api:web-budgets' %}">
+      <span>💰</span> Create Budget
+    </a>
+    <a class="btn btn-success" href="{% url 'api:web-transactions' %}">
+      <span>➕</span> Add Transaction
+    </a>
   </div>
 </div>
 {% endif %}
 
-<div class="grid-3 section stagger">
-  <div class="card kpi income">
-    <h3>💰 Total Income</h3>
-    <div class="value">₹{{ income_total|floatformat:2 }}</div>
+<div class="kpi-grid stagger">
+  <div class="kpi-card income">
+    <div class="kpi-icon">💰</div>
+    <div class="kpi-content">
+      <span class="kpi-label">Total Income</span>
+      <span class="kpi-value">₹{{ income_total|floatformat:2 }}</span>
+    </div>
+    <div class="kpi-trend positive">↑ This month</div>
   </div>
-  <div class="card kpi expense">
-    <h3>💸 Total Expenses</h3>
-    <div class="value">₹{{ expense_total|floatformat:2 }}</div>
+  <div class="kpi-card expense">
+    <div class="kpi-icon">💸</div>
+    <div class="kpi-content">
+      <span class="kpi-label">Total Expenses</span>
+      <span class="kpi-value">₹{{ expense_total|floatformat:2 }}</span>
+    </div>
+    <div class="kpi-trend">📊 Tracked</div>
   </div>
-  <div class="card kpi">
-    <h3>📊 Net Balance</h3>
-    <div class="value" style="color: {% if net_amount >= 0 %}var(--success){% else %}var(--danger){% endif %}">₹{{ net_amount|floatformat:2 }}</div>
+  <div class="kpi-card balance {% if net_amount >= 0 %}positive{% else %}negative{% endif %}">
+    <div class="kpi-icon">📊</div>
+    <div class="kpi-content">
+      <span class="kpi-label">Net Balance</span>
+      <span class="kpi-value {% if net_amount >= 0 %}text-success{% else %}text-danger{% endif %}">₹{{ net_amount|floatformat:2 }}</span>
+    </div>
+    <div class="kpi-trend {% if net_amount >= 0 %}positive{% else %}negative{% endif %}">{% if net_amount >= 0 %}✨ Healthy{% else %}⚠️ Review{% endif %}</div>
   </div>
 </div>
 
 {% if budget_warnings %}
-<div class="section fade-up">
-  <h3 class="section-title">⚠️ Budget Alerts</h3>
-  <div class="card">
-    <ul class="warn-list">
+<div class="alert-section fade-up">
+  <div class="glass-card alert-card">
+    <div class="alert-header">
+      <span class="alert-icon">⚠️</span>
+      <h3>Budget Alerts</h3>
+    </div>
+    <ul class="alert-list">
       {% for warning in budget_warnings %}
-      <li>{{ warning }}</li>
+      <li class="alert-item">
+        <span class="alert-dot"></span>
+        {{ warning }}
+      </li>
       {% endfor %}
     </ul>
   </div>
 </div>
 {% endif %}
 
-<div class="grid-2 section stagger">
-  <div class="card chart-card">
-    <h3 class="section-title">📈 Spending Trend (30 Days)</h3>
+<div class="charts-grid stagger">
+  <div class="glass-card chart-card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="title-icon">📈</span>
+        <h3>Spending Trend</h3>
+      </div>
+      <span class="card-badge">30 Days</span>
+    </div>
     {% if has_trend_data %}
-      <canvas id="trendChart"></canvas>
+      <div class="chart-container">
+        <canvas id="trendChart"></canvas>
+      </div>
     {% else %}
-      <p class="empty-state">Add expenses to visualize your spending patterns</p>
+      <div class="chart-empty">
+        <span class="empty-icon">📉</span>
+        <p>Add expenses to visualize your spending patterns</p>
+      </div>
     {% endif %}
   </div>
-  <div class="card chart-card">
-    <h3 class="section-title">🎯 Top Categories</h3>
+  <div class="glass-card chart-card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="title-icon">🎯</span>
+        <h3>Top Categories</h3>
+      </div>
+      <span class="card-badge">Breakdown</span>
+    </div>
     {% if has_breakdown_data %}
-      <canvas id="breakdownChart"></canvas>
+      <div class="chart-container">
+        <canvas id="breakdownChart"></canvas>
+      </div>
     {% else %}
-      <p class="empty-state">Category breakdown appears after logging expenses</p>
+      <div class="chart-empty">
+        <span class="empty-icon">🎨</span>
+        <p>Category breakdown appears after logging expenses</p>
+      </div>
     {% endif %}
   </div>
 </div>
 
-<div class="grid-2 section stagger">
-  <div class="card">
-    <h3 class="section-title">📁 Budget Overview</h3>
-    {% if budgets_summary %}
-      <ul class="insight-list">
-        {% for budget in budgets_summary|slice:':5' %}
-        <li>
-          <span>{{ budget.category }}</span>
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <span class="badge {% if budget.utilization_pct >= 100 %}danger{% elif budget.utilization_pct >= budget.alert_threshold %}warn{% else %}ok{% endif %}">
-              {{ budget.utilization_pct }}%
-            </span>
-            <strong>₹{{ budget.spent_amount|floatformat:0 }}/₹{{ budget.limit_amount|floatformat:0 }}</strong>
-          </div>
-        </li>
-        {% endfor %}
-      </ul>
-      {% if budgets_summary|length > 5 %}
-        <div style="margin-top: 16px;">
-          <a class="inline" href="{% url 'api:web-budgets' %}">View all budgets →</a>
-        </div>
+<div class="info-grid stagger">
+  <div class="glass-card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="title-icon">📁</span>
+        <h3>Budget Overview</h3>
+      </div>
+      {% if budgets_summary %}
+      <a class="card-link" href="{% url 'api:web-budgets' %}">View all →</a>
       {% endif %}
-    {% else %}
-      <p class="empty-state">No budgets yet</p>
-    {% endif %}
-  </div>
-  <div class="card">
-    <h3 class="section-title">🧾 Recent Activity</h3>
-    {% if recent_transactions %}
-      <ul class="insight-list">
-        {% for tx in recent_transactions %}
-        <li>
-          <span>{{ tx.date|date:"M d, H:i" }} · {{ tx.category }}</span>
-          <strong style="color: {% if tx.type == 'expense' %}var(--danger){% else %}var(--success){% endif %}">
-            {% if tx.type == 'expense' %}-{% else %}+{% endif %}₹{{ tx.amount|floatformat:2 }}
-          </strong>
-        </li>
+    </div>
+    {% if budgets_summary %}
+      <div class="budget-list">
+        {% for budget in budgets_summary|slice:':5' %}
+        <div class="budget-item">
+          <div class="budget-info">
+            <span class="budget-category">{{ budget.category }}</span>
+            <span class="budget-progress">₹{{ budget.spent_amount|floatformat:0 }} / ₹{{ budget.limit_amount|floatformat:0 }}</span>
+          </div>
+          <div class="budget-bar-wrapper">
+            <div class="budget-bar" style="--progress: {{ budget.utilization_pct }}%">
+              <div class="budget-bar-fill {% if budget.utilization_pct >= 100 %}danger{% elif budget.utilization_pct >= budget.alert_threshold %}warning{% else %}success{% endif %}"></div>
+            </div>
+            <span class="budget-percent {% if budget.utilization_pct >= 100 %}danger{% elif budget.utilization_pct >= budget.alert_threshold %}warning{% else %}success{% endif %}">{{ budget.utilization_pct }}%</span>
+          </div>
+        </div>
         {% endfor %}
-      </ul>
-      <div style="margin-top: 16px;">
-        <a class="inline" href="{% url 'api:web-transactions' %}">View all transactions →</a>
       </div>
     {% else %}
-      <p class="empty-state">No transactions yet</p>
+      <div class="empty-state-small">
+        <span>📊</span>
+        <p>No budgets created yet</p>
+        <a href="{% url 'api:web-budgets' %}" class="btn btn-sm">Create Budget</a>
+      </div>
+    {% endif %}
+  </div>
+  <div class="glass-card">
+    <div class="card-header">
+      <div class="card-title">
+        <span class="title-icon">🧾</span>
+        <h3>Recent Activity</h3>
+      </div>
+      {% if recent_transactions %}
+      <a class="card-link" href="{% url 'api:web-transactions' %}">View all →</a>
+      {% endif %}
+    </div>
+    {% if recent_transactions %}
+      <div class="activity-list">
+        {% for tx in recent_transactions %}
+        <div class="activity-item">
+          <div class="activity-icon {% if tx.type == 'expense' %}expense{% else %}income{% endif %}">
+            {% if tx.type == 'expense' %}💸{% else %}💰{% endif %}
+          </div>
+          <div class="activity-details">
+            <span class="activity-category">{{ tx.category }}</span>
+            <span class="activity-date">{{ tx.date|date:"M d, H:i" }}</span>
+          </div>
+          <span class="activity-amount {% if tx.type == 'expense' %}expense{% else %}income{% endif %}">
+            {% if tx.type == 'expense' %}-{% else %}+{% endif %}₹{{ tx.amount|floatformat:2 }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state-small">
+        <span>🧾</span>
+        <p>No transactions yet</p>
+        <a href="{% url 'api:web-transactions' %}" class="btn btn-sm">Add Transaction</a>
+      </div>
     {% endif %}
   </div>
 </div>
@@ -115,44 +191,82 @@
 <script>
 (function() {
   if (typeof Chart === 'undefined') { return; }
-  Chart.defaults.color = '#a0a0a0';
-  Chart.defaults.borderColor = 'rgba(0, 255, 157, 0.1)';
+  
+  // Premium Chart Defaults
+  Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+  Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+  Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+  Chart.defaults.font.weight = '500';
+  
+  // Animation config
+  const premiumAnimation = {
+    duration: 1500,
+    easing: 'easeOutQuart',
+    delay: (context) => context.dataIndex * 100
+  };
   
   {% if has_trend_data %}
   const trendCtx = document.getElementById('trendChart');
   if (trendCtx) {
-    // Create gradient
     const ctx = trendCtx.getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(0, 255, 157, 0.4)');
-    gradient.addColorStop(0.5, 'rgba(0, 255, 157, 0.15)');
-    gradient.addColorStop(1, 'rgba(0, 255, 157, 0)');
+    
+    // Multi-layered gradient for premium look
+    const areaGradient = ctx.createLinearGradient(0, 0, 0, 350);
+    areaGradient.addColorStop(0, 'rgba(99, 102, 241, 0.6)');
+    areaGradient.addColorStop(0.3, 'rgba(139, 92, 246, 0.4)');
+    areaGradient.addColorStop(0.6, 'rgba(168, 85, 247, 0.2)');
+    areaGradient.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    
+    const lineGradient = ctx.createLinearGradient(0, 0, ctx.canvas.width, 0);
+    lineGradient.addColorStop(0, '#6366f1');
+    lineGradient.addColorStop(0.5, '#8b5cf6');
+    lineGradient.addColorStop(1, '#a855f7');
+    
+    // Glow effect gradient
+    const glowGradient = ctx.createLinearGradient(0, 0, 0, 350);
+    glowGradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
+    glowGradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
     
     new Chart(trendCtx, {
       type: 'line',
       data: {
         labels: {{ trend_labels_json|safe }},
-        datasets: [{
-          label: 'Daily Spending',
-          data: {{ trend_values_json|safe }},
-          tension: 0.4,
-          borderWidth: 3,
-          borderColor: '#00ff9d',
-          backgroundColor: gradient,
-          pointRadius: 5,
-          pointHoverRadius: 10,
-          pointBackgroundColor: '#00ff9d',
-          pointBorderColor: '#000',
-          pointBorderWidth: 2,
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: '#00ff9d',
-          pointHoverBorderWidth: 3,
-          fill: true,
-        }]
+        datasets: [
+          // Glow layer (hidden from tooltip)
+          {
+            data: {{ trend_values_json|safe }},
+            tension: 0.4,
+            borderWidth: 20,
+            borderColor: 'rgba(139, 92, 246, 0.15)',
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+            hidden: false,
+          },
+          // Main line
+          {
+            label: 'Daily Spending',
+            data: {{ trend_values_json|safe }},
+            tension: 0.4,
+            borderWidth: 4,
+            borderColor: lineGradient,
+            backgroundColor: areaGradient,
+            pointRadius: 6,
+            pointHoverRadius: 12,
+            pointBackgroundColor: '#a855f7',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 3,
+            pointHoverBackgroundColor: '#ffffff',
+            pointHoverBorderColor: '#a855f7',
+            pointHoverBorderWidth: 4,
+            fill: true,
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: premiumAnimation,
         interaction: {
           mode: 'index',
           intersect: false,
@@ -160,62 +274,117 @@
         plugins: { 
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.95)',
-            padding: 16,
-            borderColor: '#00ff9d',
-            borderWidth: 2,
-            titleColor: '#00ff9d',
+            enabled: true,
+            filter: function(tooltipItem) {
+              return tooltipItem.datasetIndex === 1;
+            },
+            backgroundColor: 'rgba(15, 15, 20, 0.95)',
+            padding: { top: 16, right: 20, bottom: 16, left: 20 },
+            borderColor: 'rgba(139, 92, 246, 0.5)',
+            borderWidth: 1,
+            titleColor: '#a78bfa',
             bodyColor: '#fff',
-            titleFont: { size: 14, weight: 'bold' },
-            bodyFont: { size: 14 },
+            titleFont: { size: 13, weight: '600', family: 'Inter' },
+            bodyFont: { size: 18, weight: '700', family: 'Inter' },
+            cornerRadius: 16,
             displayColors: false,
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
             callbacks: {
               title: function(context) {
-                return '📅 ' + context[0].label;
+                return context[0].label;
               },
               label: function(context) {
-                return '💸 Spent: ₹' + context.parsed.y.toLocaleString();
+                return '₹' + context.parsed.y.toLocaleString('en-IN');
               }
             }
           }
         },
         scales: {
           x: { 
-            grid: { display: false },
+            grid: { 
+              display: false,
+            },
+            border: { display: false },
             ticks: { 
-              color: '#a0a0a0',
-              font: { size: 12, weight: '500' }
+              color: 'rgba(255,255,255,0.4)',
+              font: { size: 11, weight: '600' },
+              maxRotation: 0,
+              padding: 10
             }
           },
           y: { 
             beginAtZero: true,
+            border: { display: false },
             grid: { 
-              color: 'rgba(0, 255, 157, 0.1)',
-              lineWidth: 1
+              color: 'rgba(255, 255, 255, 0.04)',
+              lineWidth: 1,
+              drawTicks: false
             },
             ticks: { 
-              color: '#a0a0a0',
-              font: { size: 12 },
+              color: 'rgba(255,255,255,0.4)',
+              font: { size: 11, weight: '600' },
+              padding: 15,
               callback: function(value) {
-                return '₹' + value.toLocaleString();
+                return '₹' + value.toLocaleString('en-IN');
               }
             }
+          }
+        },
+        elements: {
+          line: {
+            capBezierPoints: true
           }
         }
       }
     });
   }
   {% endif %}
+  
   {% if has_breakdown_data %}
   const breakdownCtx = document.getElementById('breakdownChart');
   if (breakdownCtx) {
-    const colors = [
-      '#00d4ff',  // Cyan
-      '#00ff9d',  // Neon Green
-      '#ffd700',  // Gold
-      '#ff0066',  // Pink
-      '#9d4edd',  // Purple
-      '#ff6b35'   // Orange
+    const ctx = breakdownCtx.getContext('2d');
+    
+    // Create gradient colors for extraordinary look
+    const createGradient = (color1, color2) => {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+      gradient.addColorStop(0, color1);
+      gradient.addColorStop(1, color2);
+      return gradient;
+    };
+    
+    // Premium gradient color palette
+    const premiumColors = [
+      createGradient('#3b82f6', '#1d4ed8'), // Blue gradient
+      createGradient('#ef4444', '#b91c1c'), // Red gradient
+      createGradient('#eab308', '#ca8a04'), // Yellow/Gold gradient
+      createGradient('#06b6d4', '#0891b2'), // Cyan gradient
+      createGradient('#f97316', '#c2410c'), // Orange gradient
+      createGradient('#22c55e', '#15803d'), // Green gradient
+      createGradient('#8b5cf6', '#6d28d9'), // Purple gradient
+      createGradient('#ec4899', '#be185d'), // Pink gradient
+    ];
+    
+    const solidColors = [
+      '#3b82f6', '#ef4444', '#eab308', '#06b6d4',
+      '#f97316', '#22c55e', '#8b5cf6', '#ec4899'
+    ];
+    
+    const hoverColors = [
+      '#60a5fa', '#f87171', '#facc15', '#22d3ee',
+      '#fb923c', '#4ade80', '#a78bfa', '#f472b6'
+    ];
+    
+    // Glow shadow colors
+    const glowColors = [
+      'rgba(59, 130, 246, 0.6)',
+      'rgba(239, 68, 68, 0.6)',
+      'rgba(234, 179, 8, 0.6)',
+      'rgba(6, 182, 212, 0.6)',
+      'rgba(249, 115, 22, 0.6)',
+      'rgba(34, 197, 94, 0.6)',
+      'rgba(139, 92, 246, 0.6)',
+      'rgba(236, 72, 153, 0.6)'
     ];
     
     new Chart(breakdownCtx, {
@@ -224,63 +393,185 @@
         labels: {{ breakdown_labels_json|safe }},
         datasets: [{
           data: {{ breakdown_values_json|safe }},
-          backgroundColor: colors,
-          borderColor: '#000',
-          borderWidth: 4,
-          hoverBorderColor: '#fff',
+          backgroundColor: solidColors,
+          hoverBackgroundColor: hoverColors,
+          borderColor: 'rgba(0, 0, 0, 0.4)',
+          borderWidth: 2,
+          hoverBorderColor: '#ffffff',
           hoverBorderWidth: 4,
-          hoverOffset: 15,
-          spacing: 2,
+          hoverOffset: 20,
+          spacing: 6,
+          borderRadius: 8,
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+          animateRotate: true,
+          animateScale: true,
+          duration: 2000,
+          easing: 'easeOutElastic'
+        },
         layout: {
-          padding: 10
+          padding: {
+            top: 5,
+            bottom: 20,
+            left: 5,
+            right: 5
+          }
         },
         plugins: { 
           legend: { 
             position: 'bottom',
             labels: { 
-              color: '#fff',
-              padding: 20,
-              font: { size: 13, weight: '600' },
+              color: '#ffffff',
+              padding: 22,
+              font: { size: 13, weight: '700', family: 'Inter, sans-serif' },
               usePointStyle: true,
               pointStyle: 'rectRounded',
-              boxWidth: 15,
-              boxHeight: 15
+              boxWidth: 14,
+              boxHeight: 14,
+              generateLabels: function(chart) {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map((label, i) => {
+                    const value = data.datasets[0].data[i];
+                    const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                    const pct = ((value / total) * 100).toFixed(0);
+                    return {
+                      text: label + ' • ' + pct + '%',
+                      fillStyle: solidColors[i],
+                      fontColor: '#ffffff',
+                      strokeStyle: solidColors[i],
+                      lineWidth: 2,
+                      pointStyle: 'rectRounded',
+                      hidden: false,
+                      index: i
+                    };
+                  });
+                }
+                return [];
+              }
             } 
           },
           tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.95)',
-            padding: 18,
-            borderColor: '#00ff9d',
-            borderWidth: 2,
-            titleColor: '#00ff9d',
-            bodyColor: '#fff',
-            titleFont: { size: 15, weight: 'bold' },
-            bodyFont: { size: 14 },
-            displayColors: true,
-            boxWidth: 12,
-            boxHeight: 12,
-            boxPadding: 6,
-            callbacks: {
-              title: function(context) {
-                return '🏷️ ' + context[0].label;
-              },
-              label: function(context) {
-                const value = '₹' + context.parsed.toLocaleString();
-                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                const percentage = ((context.parsed / total) * 100).toFixed(1) + '%';
-                return '  💰 ' + value + ' (' + percentage + ')';
+            enabled: true,
+            external: function(context) {
+              // Get or create tooltip element
+              let tooltipEl = document.getElementById('chartjs-tooltip');
+              if (!tooltipEl) {
+                tooltipEl = document.createElement('div');
+                tooltipEl.id = 'chartjs-tooltip';
+                tooltipEl.style.cssText = 'background: rgba(10,10,15,0.95); border-radius: 12px; padding: 12px 16px; color: #fff; font-family: Inter, sans-serif; pointer-events: none; position: absolute; transform: translate(-50%, -100%); transition: all 0.15s ease; z-index: 9999; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 40px rgba(0,0,0,0.5);';
+                document.body.appendChild(tooltipEl);
               }
-            }
+              
+              const tooltipModel = context.tooltip;
+              
+              if (tooltipModel.opacity === 0) {
+                tooltipEl.style.opacity = 0;
+                return;
+              }
+              
+              if (tooltipModel.body) {
+                const dataPoint = tooltipModel.dataPoints[0];
+                const label = dataPoint.label;
+                const value = dataPoint.parsed;
+                const total = dataPoint.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = ((value / total) * 100).toFixed(1);
+                const color = dataPoint.element.options.backgroundColor;
+                
+                tooltipEl.innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div style="width:14px;height:14px;border-radius:4px;background:' + color + ';"></div><div><div style="font-weight:700;font-size:14px;margin-bottom:4px;">' + label + '</div><div style="font-size:18px;font-weight:800;">₹' + value.toLocaleString('en-IN') + ' <span style="opacity:0.7;font-size:14px;">(' + pct + '%)</span></div></div></div>';
+              }
+              
+              const position = context.chart.canvas.getBoundingClientRect();
+              tooltipEl.style.opacity = 1;
+              tooltipEl.style.left = position.left + window.scrollX + tooltipModel.caretX + 'px';
+              tooltipEl.style.top = position.top + window.scrollY + tooltipModel.caretY - 20 + 'px';
+            },
+            enabled: false
           }
         },
-        cutout: '65%',
+        cutout: '58%',
         radius: '90%'
-      }
+      },
+      plugins: [
+        // Outer glow ring
+        {
+          id: 'outerGlow',
+          beforeDraw: function(chart) {
+            const ctx = chart.ctx;
+            const chartArea = chart.chartArea;
+            const centerX = (chartArea.left + chartArea.right) / 2;
+            const centerY = (chartArea.top + chartArea.bottom) / 2;
+            const radius = Math.min(chartArea.right - chartArea.left, chartArea.bottom - chartArea.top) / 2;
+            
+            ctx.save();
+            
+            // Outer glow
+            const glowGradient = ctx.createRadialGradient(centerX, centerY, radius * 0.6, centerX, centerY, radius * 1.15);
+            glowGradient.addColorStop(0, 'transparent');
+            glowGradient.addColorStop(0.7, 'rgba(59, 130, 246, 0.08)');
+            glowGradient.addColorStop(0.85, 'rgba(139, 92, 246, 0.12)');
+            glowGradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = glowGradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 1.15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+          }
+        },
+        // Center decoration
+        {
+          id: 'centerDecoration',
+          afterDraw: function(chart) {
+            const ctx = chart.ctx;
+            const chartArea = chart.chartArea;
+            const centerX = (chartArea.left + chartArea.right) / 2;
+            const centerY = (chartArea.top + chartArea.bottom) / 2;
+            const innerRadius = Math.min(chartArea.right - chartArea.left, chartArea.bottom - chartArea.top) / 2 * 0.58;
+            
+            const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            
+            ctx.save();
+            
+            // Inner circle gradient background
+            const innerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, innerRadius);
+            innerGradient.addColorStop(0, 'rgba(25, 25, 35, 1)');
+            innerGradient.addColorStop(0.8, 'rgba(18, 18, 25, 1)');
+            innerGradient.addColorStop(1, 'rgba(12, 12, 18, 1)');
+            
+            ctx.fillStyle = innerGradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerRadius - 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Inner ring accent
+            ctx.strokeStyle = 'rgba(139, 92, 246, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerRadius - 6, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Total label
+            ctx.font = '600 10px Inter, sans-serif';
+            ctx.fillStyle = 'rgba(167, 139, 250, 1)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('TOTAL SPENT', centerX, centerY - 12);
+            
+            // Total value
+            ctx.font = '700 20px Inter, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('₹' + total.toLocaleString('en-IN'), centerX, centerY + 10);
+            
+            ctx.restore();
+          }
+        }
+      ]
     });
   }
   {% endif %}

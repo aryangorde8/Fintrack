@@ -4,70 +4,531 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>FinTrack - Login</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>FinTrack - Premium Finance Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <style>
-      body { 
-        background: #000000; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        height: 100vh; 
-        margin: 0;
-        padding: 20px;
-      }
-      .login-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-      }
-      .shell {
-        background: var(--card-bg);
-        border: 1px solid var(--border);
-        padding: 40px;
-      }
-      .auth-card { 
-        width: 420px;
-        max-width: 100%;
-        animation: floatIn .4s ease both;
-      }
-      @keyframes floatIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .auth-card h1 {
-        margin-bottom: 8px;
-        background: none;
-        -webkit-text-fill-color: initial;
-        color: var(--primary);
-        text-shadow: var(--primary-glow);
-      }
-      .auth-card p {
-        margin-bottom: 28px;
-      }
-      .auth-card label {
-        display: block;
-        text-align: left;
-      }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Mesh gradient background */
+        .mesh-gradient {
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(at 40% 20%, hsla(280, 90%, 40%, 0.3) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, hsla(189, 100%, 40%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(355, 85%, 45%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 80% 50%, hsla(140, 80%, 40%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, hsla(22, 100%, 50%, 0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 100%, hsla(242, 100%, 60%, 0.2) 0px, transparent 50%),
+                radial-gradient(at 0% 0%, hsla(343, 100%, 55%, 0.15) 0px, transparent 50%);
+            z-index: 0;
+            animation: meshMove 20s ease infinite;
+        }
+        
+        @keyframes meshMove {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(30deg); }
+        }
+        
+        /* Animated grid */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 1;
+            animation: gridPulse 10s ease-in-out infinite;
+        }
+        
+        @keyframes gridPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+        
+        /* Floating orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.6;
+            animation: orbFloat 25s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            top: -150px;
+            right: -100px;
+        }
+        
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            bottom: -100px;
+            left: -100px;
+            animation-delay: -8s;
+        }
+        
+        .orb-3 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #f59e0b, #fbbf24);
+            top: 40%;
+            left: 20%;
+            opacity: 0.3;
+            animation-delay: -15s;
+        }
+        
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(40px, -40px) scale(1.08); }
+            50% { transform: translate(-30px, 30px) scale(0.95); }
+            75% { transform: translate(-40px, -20px) scale(1.03); }
+        }
+        
+        /* Main wrapper */
+        .login-wrapper {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 480px;
+            perspective: 1000px;
+        }
+        
+        /* Premium card */
+        .login-card {
+            position: relative;
+            background: rgba(15, 15, 18, 0.85);
+            backdrop-filter: blur(60px) saturate(150%);
+            -webkit-backdrop-filter: blur(60px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 40px;
+            padding: 56px 48px;
+            box-shadow: 
+                0 0 0 1px rgba(255,255,255,0.05) inset,
+                0 50px 100px -20px rgba(0, 0, 0, 0.7),
+                0 30px 60px -30px rgba(0, 0, 0, 0.5),
+                0 0 120px rgba(99, 102, 241, 0.15);
+            animation: cardFloat 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(60px) rotateX(10deg);
+            transform-style: preserve-3d;
+        }
+        
+        @keyframes cardFloat {
+            to {
+                opacity: 1;
+                transform: translateY(0) rotateX(0);
+            }
+        }
+        
+        /* Glowing border effect */
+        .login-card::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7, #6366f1);
+            background-size: 400% 400%;
+            border-radius: 42px;
+            z-index: -1;
+            opacity: 0;
+            animation: borderGlow 8s linear infinite;
+            transition: opacity 0.3s;
+        }
+        
+        .login-card:hover::before {
+            opacity: 0.6;
+        }
+        
+        @keyframes borderGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Brand section */
+        .brand {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        
+        .brand-icon-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 28px;
+        }
+        
+        .brand-icon {
+            width: 88px;
+            height: 88px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 44px;
+            position: relative;
+            box-shadow: 
+                0 20px 50px rgba(99, 102, 241, 0.4),
+                0 0 0 1px rgba(255,255,255,0.1) inset;
+            animation: iconFloat 4s ease-in-out infinite;
+        }
+        
+        .brand-icon::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 32px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            z-index: -1;
+            opacity: 0.4;
+            filter: blur(16px);
+            animation: iconGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes iconFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        
+        @keyframes iconGlow {
+            0% { opacity: 0.3; transform: scale(0.95); }
+            100% { opacity: 0.6; transform: scale(1.05); }
+        }
+        
+        .brand h1 {
+            font-size: 42px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            letter-spacing: -1.5px;
+        }
+        
+        .brand-tagline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 24px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #a78bfa;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        
+        .brand-tagline::before {
+            content: '✨';
+        }
+        
+        /* Form styling */
+        .form-group {
+            margin-bottom: 26px;
+            position: relative;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        .input-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            padding: 2px;
+            background: linear-gradient(135deg, transparent 40%, rgba(99, 102, 241, 0.3), transparent 60%);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: xor;
+            -webkit-mask-composite: xor;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .form-group:focus-within .input-wrapper::before {
+            opacity: 1;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 20px 24px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #fff;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: rgba(99, 102, 241, 0.6);
+            background: rgba(99, 102, 241, 0.08);
+            box-shadow: 
+                0 0 0 4px rgba(99, 102, 241, 0.1),
+                0 0 40px rgba(99, 102, 241, 0.15);
+        }
+        
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+        }
+        
+        /* Login button */
+        .login-btn {
+            width: 100%;
+            padding: 22px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            border: none;
+            border-radius: 18px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+        
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 
+                0 20px 50px rgba(99, 102, 241, 0.5),
+                0 0 0 1px rgba(255,255,255,0.1);
+        }
+        
+        .login-btn:hover::before {
+            left: 100%;
+        }
+        
+        .login-btn:active {
+            transform: translateY(-2px);
+        }
+        
+        /* Footer */
+        .footer-text {
+            text-align: center;
+            margin-top: 36px;
+            padding-top: 28px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 14px;
+        }
+        
+        .footer-text span {
+            color: #a78bfa;
+            font-weight: 600;
+        }
+        
+        /* Feature badges */
+        .features {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 28px;
+            flex-wrap: wrap;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .feature-icon {
+            width: 20px;
+            height: 20px;
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+        
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 2;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 50%;
+            opacity: 0;
+            animation: particleRise 20s linear infinite;
+        }
+        
+        .particle:nth-child(1) { left: 5%; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 15%; animation-delay: -3s; width: 6px; height: 6px; }
+        .particle:nth-child(3) { left: 25%; animation-delay: -5s; }
+        .particle:nth-child(4) { left: 35%; animation-delay: -8s; width: 5px; height: 5px; }
+        .particle:nth-child(5) { left: 45%; animation-delay: -10s; }
+        .particle:nth-child(6) { left: 55%; animation-delay: -12s; width: 7px; height: 7px; }
+        .particle:nth-child(7) { left: 65%; animation-delay: -14s; }
+        .particle:nth-child(8) { left: 75%; animation-delay: -16s; width: 5px; height: 5px; }
+        .particle:nth-child(9) { left: 85%; animation-delay: -18s; }
+        .particle:nth-child(10) { left: 95%; animation-delay: -2s; width: 6px; height: 6px; }
+        
+        @keyframes particleRise {
+            0% { 
+                transform: translateY(100vh) rotate(0deg); 
+                opacity: 0;
+            }
+            5% { opacity: 0.6; }
+            95% { opacity: 0.6; }
+            100% { 
+                transform: translateY(-100vh) rotate(720deg); 
+                opacity: 0;
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 520px) {
+            .login-card {
+                padding: 40px 28px;
+                border-radius: 32px;
+            }
+            
+            .brand h1 {
+                font-size: 32px;
+            }
+            
+            .brand-icon {
+                width: 72px;
+                height: 72px;
+                font-size: 36px;
+            }
+        }
     </style>
-  </head>
+</head>
 <body>
-    <div class="login-container">
-      <div class="shell card auth-card">
-          <h1 style="text-align:center;">🏦 FinTrack</h1>
-          <p class="muted" style="text-align:center;">Login or Register</p>
-          <form method="POST">
-              {% csrf_token %}
-              <label>Username</label>
-              <input type="text" name="username" placeholder="Username" required>
-              <label>Password</label>
-              <input type="password" name="password" placeholder="Password" required>
-              <div class="spacer-1"></div>
-              <button class="btn" style="width:100%;" type="submit">Login / Register</button>
-          </form>
-      </div>
+    <!-- Background effects -->
+    <div class="mesh-gradient"></div>
+    <div class="grid-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    
+    <!-- Floating particles -->
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+    
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="brand">
+                <div class="brand-icon-wrapper">
+                    <div class="brand-icon">💎</div>
+                </div>
+                <h1>FinTrack</h1>
+                <span class="brand-tagline">AI-Powered Finance</span>
+            </div>
+            
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Username</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="username" placeholder="Enter your username" required autocomplete="username">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+                    </div>
+                </div>
+                
+                <button type="submit" class="login-btn">Get Started →</button>
+            </form>
+            
+            <p class="footer-text">New here? Just enter credentials to <span>create an account</span></p>
+            
+            <div class="features">
+                <div class="feature">
+                    <span class="feature-icon">🤖</span>
+                    <span>AI Receipt Scan</span>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">📊</span>
+                    <span>Smart Analytics</span>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">🔒</span>
+                    <span>Bank-Grade Security</span>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
