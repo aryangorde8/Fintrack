@@ -141,7 +141,7 @@
             }
         }
         
-        /* Glowing border effect */
+        /* Glowing border effect - disabled on hover to keep card dark */
         .login-card::before {
             content: '';
             position: absolute;
@@ -153,11 +153,10 @@
             opacity: 0;
             animation: borderGlow 8s linear infinite;
             transition: opacity 0.3s;
+            pointer-events: none;
         }
         
-        .login-card:hover::before {
-            opacity: 0.6;
-        }
+        /* Removed hover effect to keep card black */
         
         @keyframes borderGlow {
             0% { background-position: 0% 50%; }
@@ -271,7 +270,7 @@
             inset: 0;
             border-radius: 18px;
             padding: 2px;
-            background: linear-gradient(135deg, transparent 40%, rgba(99, 102, 241, 0.3), transparent 60%);
+            background: linear-gradient(135deg, transparent 40%, rgba(0, 212, 255, 0.4), transparent 60%);
             mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
             mask-composite: xor;
             -webkit-mask-composite: xor;
@@ -288,7 +287,7 @@
         .form-group input {
             width: 100%;
             padding: 20px 24px;
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(0, 0, 0, 0.4);
             border: 2px solid rgba(255, 255, 255, 0.08);
             border-radius: 18px;
             font-size: 16px;
@@ -297,13 +296,18 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
+        .form-group input:hover {
+            border-color: rgba(0, 212, 255, 0.5);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
         .form-group input:focus {
             outline: none;
-            border-color: rgba(99, 102, 241, 0.6);
-            background: rgba(99, 102, 241, 0.08);
+            border-color: rgba(0, 212, 255, 0.7);
+            background: rgba(0, 0, 0, 0.6);
             box-shadow: 
-                0 0 0 4px rgba(99, 102, 241, 0.1),
-                0 0 40px rgba(99, 102, 241, 0.15);
+                0 0 0 4px rgba(0, 212, 255, 0.1),
+                0 0 30px rgba(0, 212, 255, 0.15);
         }
         
         .form-group input::placeholder {

@@ -589,14 +589,14 @@ select {
 /* Chart Cards */
 .chart-card {
   position: relative;
-  min-height: 580px;
+  min-height: 720px;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, rgba(20, 20, 25, 0.95) 0%, rgba(15, 15, 18, 0.98) 100%);
   border: 1px solid rgba(139, 92, 246, 0.15);
   border-radius: var(--radius-xl);
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 
     0 4px 6px rgba(0, 0, 0, 0.1),
     0 20px 40px rgba(0, 0, 0, 0.2),
@@ -1079,8 +1079,12 @@ a:focus-visible {
   backdrop-filter: blur(40px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  overflow: hidden;
+  overflow: visible;
   transition: var(--transition-base);
+}
+
+.glass-card.chart-card {
+  overflow: visible;
 }
 
 .glass-card:hover {
@@ -1094,7 +1098,7 @@ a:focus-visible {
   align-items: center;
   padding: 24px 28px;
   border-bottom: 1px solid rgba(139, 92, 246, 0.1);
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.05) 0%, transparent 100%);
+  background: transparent;
   position: relative;
   z-index: 1;
 }
@@ -1259,6 +1263,7 @@ a:focus-visible {
   grid-template-columns: repeat(2, 1fr);
   gap: 24px;
   margin-bottom: 32px;
+  overflow: visible;
 }
 
 @media (max-width: 1200px) {
@@ -1266,11 +1271,12 @@ a:focus-visible {
 }
 
 .chart-container {
-  padding: 24px 28px 28px;
-  height: 520px;
+  padding: 50px 28px 60px;
+  height: 650px;
   position: relative;
-  background: linear-gradient(180deg, rgba(99, 102, 241, 0.03) 0%, transparent 50%);
+  background: transparent;
   border-radius: 0 0 24px 24px;
+  overflow: visible;
 }
 
 .chart-container::before {
