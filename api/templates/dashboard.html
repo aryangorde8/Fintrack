@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% block title %}Dashboard - FinTrack{% endblock %}
 {% block content %}
 <div class="page-header fade-in">
   <div class="header-content">
@@ -26,6 +27,13 @@
   </div>
 </div>
 {% endif %}
+
+<!-- AI Insights Widget -->
+<div class="insights-widget" id="insightsWidget">
+  <div class="insights-grid" id="insightsGrid">
+    <!-- Insights loaded via JS -->
+  </div>
+</div>
 
 <div class="kpi-grid stagger">
   <div class="kpi-card income">
@@ -72,6 +80,33 @@
   </div>
 </div>
 {% endif %}
+
+<!-- Spending Heatmap -->
+<div class="heatmap-widget glass-card">
+  <div class="heatmap-container">
+    <div class="heatmap-header">
+      <span class="heatmap-title">📅 Spending Activity</span>
+      <div class="heatmap-legend">
+        <span>Less</span>
+        <div class="legend-scale">
+          <span style="background: var(--bg-tertiary);"></span>
+          <span style="background: rgba(34, 197, 94, 0.3);"></span>
+          <span style="background: rgba(34, 197, 94, 0.5);"></span>
+          <span style="background: rgba(234, 179, 8, 0.6);"></span>
+          <span style="background: rgba(239, 68, 68, 0.7);"></span>
+        </div>
+        <span>More</span>
+      </div>
+    </div>
+    <div class="heatmap-grid" id="heatmapGrid">
+      <!-- Heatmap loaded via JS -->
+    </div>
+    <div class="heatmap-months">
+      <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
+      <span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+    </div>
+  </div>
+</div>
 
 <div class="charts-grid stagger">
   <div class="glass-card chart-card">
@@ -189,14 +224,40 @@
 
 {% if has_trend_data or has_breakdown_data %}
 <script>
-(function() {
+// Wait for DOM and theme to be set
+document.addEventListener('DOMContentLoaded', function() {
+  // Longer delay to ensure theme is fully applied from localStorage
+  setTimeout(function() {
+    initCharts();
+  }, 100);
+});
+
+function initCharts() {
   if (typeof Chart === 'undefined') { return; }
   
+  // Detect theme - check both localStorage AND the actual attribute
+  const savedTheme = localStorage.getItem('fintrack-theme');
+  const attrTheme = document.documentElement.getAttribute('data-theme');
+  
+  // Function to check theme (can be called later in plugins)
+  function isLightTheme() {
+    return (savedTheme === 'light') || (attrTheme === 'light');
+  }
+  
+  const isLight = isLightTheme();
+  
+  console.log('Chart init - savedTheme:', savedTheme, 'attrTheme:', attrTheme, 'isLight:', isLight);
+  
+  // Theme-aware colors - NEON text for light mode, BRIGHT WHITE text for dark mode
+  const tickColor = isLight ? '#7c3aed' : '#f8fafc';
+  const gridColor = isLight ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255, 255, 255, 0.1)';
+  const legendColor = isLight ? '#6d28d9' : '#f8fafc';
+  
   // Premium Chart Defaults
-  Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
-  Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+  Chart.defaults.color = isLight ? '#7c3aed' : '#f8fafc';
+  Chart.defaults.borderColor = gridColor;
   Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
-  Chart.defaults.font.weight = '500';
+  Chart.defaults.font.weight = '600';
   
   // Animation config
   const premiumAnimation = {
@@ -306,8 +367,8 @@
             },
             border: { display: false },
             ticks: { 
-              color: 'rgba(255,255,255,0.4)',
-              font: { size: 11, weight: '600' },
+              color: tickColor,
+              font: { size: 12, weight: '700' },
               maxRotation: 0,
               padding: 10
             }
@@ -316,13 +377,13 @@
             beginAtZero: true,
             border: { display: false },
             grid: { 
-              color: 'rgba(255, 255, 255, 0.04)',
+              color: gridColor,
               lineWidth: 1,
               drawTicks: false
             },
             ticks: { 
-              color: 'rgba(255,255,255,0.4)',
-              font: { size: 11, weight: '600' },
+              color: tickColor,
+              font: { size: 12, weight: '700' },
               padding: 15,
               callback: function(value) {
                 return '₹' + value.toLocaleString('en-IN');
@@ -415,24 +476,26 @@
         },
         layout: {
           padding: {
-            top: 50,
-            bottom: 30,
-            left: 30,
-            right: 30
+            top: 30,
+            bottom: 60,
+            left: 20,
+            right: 20
           }
         },
         plugins: { 
           legend: { 
             position: 'bottom',
             align: 'center',
+            maxHeight: 150,
             labels: { 
-              color: '#ffffff',
-              padding: 45,
+              color: legendColor,
+              padding: 60,
+              boxPadding: 200,
               font: { size: 13, weight: '700', family: 'Inter, sans-serif' },
               usePointStyle: true,
               pointStyle: 'rectRounded',
-              boxWidth: 14,
-              boxHeight: 14,
+              boxWidth: 12,
+              boxHeight: 12,
               generateLabels: function(chart) {
                 const data = chart.data;
                 if (data.labels.length && data.datasets.length) {
@@ -443,7 +506,7 @@
                     return {
                       text: label + ' • ' + pct + '%',
                       fillStyle: solidColors[i],
-                      fontColor: '#ffffff',
+                      fontColor: legendColor,
                       strokeStyle: solidColors[i],
                       lineWidth: 2,
                       pointStyle: 'rectRounded',
@@ -540,10 +603,17 @@
             ctx.save();
             
             // Inner circle gradient background
+            const isLight = isLightTheme();
             const innerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, innerRadius);
-            innerGradient.addColorStop(0, 'rgba(25, 25, 35, 1)');
-            innerGradient.addColorStop(0.8, 'rgba(18, 18, 25, 1)');
-            innerGradient.addColorStop(1, 'rgba(12, 12, 18, 1)');
+            if (isLight) {
+              innerGradient.addColorStop(0, 'rgba(15, 23, 42, 1)');
+              innerGradient.addColorStop(0.8, 'rgba(15, 23, 42, 0.95)');
+              innerGradient.addColorStop(1, 'rgba(15, 23, 42, 0.9)');
+            } else {
+              innerGradient.addColorStop(0, 'rgba(25, 25, 35, 1)');
+              innerGradient.addColorStop(0.8, 'rgba(18, 18, 25, 1)');
+              innerGradient.addColorStop(1, 'rgba(12, 12, 18, 1)');
+            }
             
             ctx.fillStyle = innerGradient;
             ctx.beginPath();
@@ -576,7 +646,82 @@
     });
   }
   {% endif %}
-})();
+}
+</script>
+
+<!-- Load AI Insights and Heatmap -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Load AI Insights
+  fetch('/api/web/api/insights/')
+    .then(res => res.json())
+    .then(data => {
+      const grid = document.getElementById('insightsGrid');
+      if (data.insights && data.insights.length > 0) {
+        grid.innerHTML = data.insights.map(insight => `
+          <div class="insight-card ${insight.type}">
+            <span class="insight-icon">${insight.icon}</span>
+            <div class="insight-content">
+              <h4>${insight.title}</h4>
+              <p>${insight.message}</p>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        document.getElementById('insightsWidget').style.display = 'none';
+      }
+    })
+    .catch(() => {
+      document.getElementById('insightsWidget').style.display = 'none';
+    });
+  
+  // Load Spending Heatmap
+  fetch('/api/web/api/heatmap/')
+    .then(res => res.json())
+    .then(data => {
+      const grid = document.getElementById('heatmapGrid');
+      const heatmapData = data.data || {};
+      
+      // Generate last 365 days
+      const today = new Date();
+      const weeks = [];
+      
+      for (let w = 52; w >= 0; w--) {
+        const weekDays = [];
+        for (let d = 0; d < 7; d++) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - (w * 7 + (6 - d)));
+          const dateStr = date.toISOString().split('T')[0];
+          const amount = heatmapData[dateStr] || 0;
+          
+          // Calculate level based on spending
+          let level = 0;
+          if (amount > 0) level = 1;
+          if (amount > 500) level = 2;
+          if (amount > 2000) level = 3;
+          if (amount > 5000) level = 4;
+          
+          weekDays.push({
+            date: dateStr,
+            amount: amount,
+            level: level
+          });
+        }
+        weeks.push(weekDays);
+      }
+      
+      grid.innerHTML = weeks.map(week => `
+        <div class="heatmap-week">
+          ${week.map(day => `
+            <div class="heatmap-day level-${day.level}" 
+                 title="${day.date}: ₹${day.amount.toLocaleString()}">
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    })
+    .catch(err => console.log('Heatmap error:', err));
+});
 </script>
 {% endif %}
 {% endblock %}

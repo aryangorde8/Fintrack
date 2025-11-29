@@ -1,0 +1,707 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Savings Goals - FinTrack{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Savings Goals</h1>
+    <p class="page-subtitle">Track your dreams and watch them become reality ✨</p>
+  </div>
+  <button class="btn btn-primary" onclick="openGoalModal()">
+    <span>🎯</span> New Goal
+  </button>
+</div>
+
+<!-- Stats Cards -->
+<div class="goals-stats stagger">
+  <div class="stat-card glass-card">
+    <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">🎯</div>
+    <div class="stat-content">
+      <span class="stat-value">{{ goals|length }}</span>
+      <span class="stat-label">Total Goals</span>
+    </div>
+  </div>
+  <div class="stat-card glass-card">
+    <div class="stat-icon" style="background: linear-gradient(135deg, #22c55e, #16a34a);">✅</div>
+    <div class="stat-content">
+      <span class="stat-value">{{ completed_goals }}</span>
+      <span class="stat-label">Completed</span>
+    </div>
+  </div>
+  <div class="stat-card glass-card">
+    <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">💰</div>
+    <div class="stat-content">
+      <span class="stat-value">₹{{ total_saved|floatformat:0 }}</span>
+      <span class="stat-label">Total Saved</span>
+    </div>
+  </div>
+  <div class="stat-card glass-card">
+    <div class="stat-icon" style="background: linear-gradient(135deg, #ec4899, #db2777);">🚀</div>
+    <div class="stat-content">
+      <span class="stat-value">{{ active_goals }}</span>
+      <span class="stat-label">In Progress</span>
+    </div>
+  </div>
+</div>
+
+<!-- Goals Grid -->
+{% if goals %}
+<div class="goals-grid stagger">
+  {% for goal in goals %}
+  <div class="goal-card glass-card {% if goal.is_completed %}completed{% endif %}" style="--goal-color: {{ goal.color }};">
+    <div class="goal-header">
+      <div class="goal-icon">{{ goal.icon }}</div>
+      <div class="goal-actions">
+        <button class="action-btn add-btn" onclick="openAddFundsModal({{ goal.id }}, '{{ goal.name }}', {{ goal.current_amount }}, {{ goal.target_amount }})" title="Add funds">
+          <span>➕</span>
+        </button>
+        <form method="POST" style="display: inline;" onsubmit="return confirm('Delete this goal?');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="goal_id" value="{{ goal.id }}">
+          <button type="submit" class="action-btn delete-btn" title="Delete">
+            <span>🗑️</span>
+          </button>
+        </form>
+      </div>
+    </div>
+    
+    <h3 class="goal-name">{{ goal.name }}</h3>
+    
+    <div class="goal-progress-ring">
+      <svg viewBox="0 0 120 120">
+        <circle class="progress-bg" cx="60" cy="60" r="54"></circle>
+        <circle class="progress-bar" cx="60" cy="60" r="54" 
+                style="stroke-dashoffset: calc(339.292 - (339.292 * {{ goal.progress_percent }}) / 100);"></circle>
+      </svg>
+      <div class="progress-text">
+        <span class="progress-percent">{{ goal.progress_percent }}%</span>
+        <span class="progress-label">saved</span>
+      </div>
+    </div>
+    
+    <div class="goal-amounts">
+      <div class="amount-item">
+        <span class="amount-label">Saved</span>
+        <span class="amount-value saved">₹{{ goal.current_amount|floatformat:0 }}</span>
+      </div>
+      <div class="amount-divider"></div>
+      <div class="amount-item">
+        <span class="amount-label">Target</span>
+        <span class="amount-value target">₹{{ goal.target_amount|floatformat:0 }}</span>
+      </div>
+    </div>
+    
+    <div class="goal-footer">
+      {% if goal.is_completed %}
+        <span class="goal-badge completed">🎉 Goal Achieved!</span>
+      {% elif goal.deadline %}
+        <span class="goal-badge deadline">📅 {{ goal.deadline|date:"M d, Y" }}</span>
+      {% else %}
+        <span class="goal-badge remaining">₹{{ goal.remaining_amount|floatformat:0 }} to go</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-hero glass-card">
+  <div class="empty-icon">🎯</div>
+  <h2>Start Your First Savings Goal</h2>
+  <p>Set goals for things you want to save for - a vacation, new car, emergency fund, or anything else!</p>
+  <button class="btn btn-primary btn-lg" onclick="openGoalModal()">
+    <span>✨</span> Create Your First Goal
+  </button>
+</div>
+{% endif %}
+
+<!-- Create Goal Modal -->
+<div class="modal-overlay" id="goalModal">
+  <div class="modal-container glass-card">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="ai-badge">✨ NEW GOAL</span>
+        <h2>Create Savings Goal</h2>
+        <p>What are you saving for?</p>
+      </div>
+      <button class="modal-close" onclick="closeGoalModal()">×</button>
+    </div>
+    
+    <form method="POST" class="modal-body">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      
+      <div class="form-group">
+        <label>Goal Name</label>
+        <input type="text" name="name" placeholder="e.g., New Car, Vacation, Emergency Fund" required>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Target Amount (₹)</label>
+          <input type="number" name="target_amount" placeholder="100000" min="1" step="0.01" required>
+        </div>
+        <div class="form-group">
+          <label>Starting Amount (₹)</label>
+          <input type="number" name="current_amount" placeholder="0" min="0" step="0.01" value="0">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Target Date (Optional)</label>
+        <input type="date" name="deadline">
+      </div>
+      
+      <div class="form-group">
+        <label>Choose Icon</label>
+        <div class="icon-picker">
+          {% for icon in icons %}
+          <label class="icon-option">
+            <input type="radio" name="icon" value="{{ icon }}" {% if forloop.first %}checked{% endif %}>
+            <span>{{ icon }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Choose Color</label>
+        <div class="color-picker">
+          {% for color in colors %}
+          <label class="color-option">
+            <input type="radio" name="color" value="{{ color }}" {% if forloop.first %}checked{% endif %}>
+            <span style="background: {{ color }};"></span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeGoalModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <span>🎯</span> Create Goal
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Funds Modal -->
+<div class="modal-overlay" id="addFundsModal">
+  <div class="modal-container glass-card" style="max-width: 420px;">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="ai-badge">💰 ADD FUNDS</span>
+        <h2 id="addFundsTitle">Add to Goal</h2>
+      </div>
+      <button class="modal-close" onclick="closeAddFundsModal()">×</button>
+    </div>
+    
+    <form method="POST" class="modal-body">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update">
+      <input type="hidden" name="goal_id" id="addFundsGoalId">
+      
+      <div class="funds-progress-display">
+        <div class="funds-current" id="fundsCurrentDisplay">₹0</div>
+        <div class="funds-arrow">→</div>
+        <div class="funds-new" id="fundsNewDisplay">₹0</div>
+      </div>
+      
+      <div class="form-group">
+        <label>Amount to Add (₹)</label>
+        <input type="number" name="add_amount" id="addAmountInput" placeholder="1000" min="1" step="0.01" required oninput="updateFundsPreview()">
+      </div>
+      
+      <div class="quick-amounts">
+        <button type="button" class="quick-btn" onclick="setQuickAmount(500)">+₹500</button>
+        <button type="button" class="quick-btn" onclick="setQuickAmount(1000)">+₹1,000</button>
+        <button type="button" class="quick-btn" onclick="setQuickAmount(5000)">+₹5,000</button>
+        <button type="button" class="quick-btn" onclick="setQuickAmount(10000)">+₹10,000</button>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeAddFundsModal()">Cancel</button>
+        <button type="submit" class="btn btn-success">
+          <span>💰</span> Add Funds
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+/* Goals Stats */
+.goals-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 1200px) {
+  .goals-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .goals-stats { grid-template-columns: 1fr; }
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Goals Grid */
+.goals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* Goal Card */
+.goal-card {
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.goal-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--goal-color, #6366f1);
+  opacity: 0.8;
+}
+
+.goal-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 40px color-mix(in srgb, var(--goal-color) 20%, transparent);
+}
+
+.goal-card.completed {
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.1), rgba(17, 17, 19, 0.8));
+}
+
+.goal-card.completed::before {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.goal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.goal-icon {
+  font-size: 48px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+}
+
+.goal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.add-btn:hover {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.goal-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+}
+
+/* Progress Ring */
+.goal-progress-ring {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 24px;
+}
+
+.goal-progress-ring svg {
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.progress-bg {
+  fill: none;
+  stroke: var(--bg-tertiary);
+  stroke-width: 8;
+}
+
+.progress-bar {
+  fill: none;
+  stroke: var(--goal-color, #6366f1);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 339.292;
+  transition: stroke-dashoffset 1s ease-out;
+  filter: drop-shadow(0 0 8px var(--goal-color));
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.progress-percent {
+  display: block;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -1px;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Goal Amounts */
+.goal-amounts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.amount-item {
+  text-align: center;
+}
+
+.amount-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.amount-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.amount-value.saved {
+  color: var(--success);
+}
+
+.amount-value.target {
+  color: var(--text-primary);
+}
+
+.amount-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--border-subtle);
+}
+
+/* Goal Footer */
+.goal-footer {
+  text-align: center;
+}
+
+.goal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.goal-badge.completed {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+
+.goal-badge.deadline {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent-primary);
+}
+
+.goal-badge.remaining {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+/* Form Enhancements */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Icon Picker */
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.icon-option {
+  cursor: pointer;
+}
+
+.icon-option input {
+  display: none;
+}
+
+.icon-option span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+  background: var(--bg-tertiary);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.icon-option input:checked + span {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.15);
+  transform: scale(1.1);
+}
+
+.icon-option:hover span {
+  background: var(--bg-elevated);
+}
+
+/* Color Picker */
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.color-option {
+  cursor: pointer;
+}
+
+.color-option input {
+  display: none;
+}
+
+.color-option span {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.color-option input:checked + span {
+  border-color: #fff;
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Add Funds Modal */
+.funds-progress-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 24px;
+  background: var(--bg-tertiary);
+  border-radius: 16px;
+  margin-bottom: 24px;
+}
+
+.funds-current, .funds-new {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.funds-current {
+  color: var(--text-secondary);
+}
+
+.funds-new {
+  color: var(--success);
+}
+
+.funds-arrow {
+  font-size: 24px;
+  color: var(--text-muted);
+}
+
+.quick-amounts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.quick-btn {
+  padding: 10px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-btn:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-subtle);
+}
+</style>
+
+<script>
+let currentGoalAmount = 0;
+let targetGoalAmount = 0;
+
+function openGoalModal() {
+  document.getElementById('goalModal').classList.add('show');
+}
+
+function closeGoalModal() {
+  document.getElementById('goalModal').classList.remove('show');
+}
+
+function openAddFundsModal(goalId, goalName, currentAmount, targetAmount) {
+  document.getElementById('addFundsGoalId').value = goalId;
+  document.getElementById('addFundsTitle').textContent = 'Add to ' + goalName;
+  document.getElementById('fundsCurrentDisplay').textContent = '₹' + currentAmount.toLocaleString();
+  document.getElementById('fundsNewDisplay').textContent = '₹' + currentAmount.toLocaleString();
+  document.getElementById('addAmountInput').value = '';
+  currentGoalAmount = currentAmount;
+  targetGoalAmount = targetAmount;
+  document.getElementById('addFundsModal').classList.add('show');
+}
+
+function closeAddFundsModal() {
+  document.getElementById('addFundsModal').classList.remove('show');
+}
+
+function updateFundsPreview() {
+  const addAmount = parseFloat(document.getElementById('addAmountInput').value) || 0;
+  const newTotal = currentGoalAmount + addAmount;
+  document.getElementById('fundsNewDisplay').textContent = '₹' + newTotal.toLocaleString();
+  
+  if (newTotal >= targetGoalAmount) {
+    document.getElementById('fundsNewDisplay').style.color = '#22c55e';
+  } else {
+    document.getElementById('fundsNewDisplay').style.color = '#22c55e';
+  }
+}
+
+function setQuickAmount(amount) {
+  document.getElementById('addAmountInput').value = amount;
+  updateFundsPreview();
+}
+
+// Close modals on outside click
+document.querySelectorAll('.modal-overlay').forEach(modal => {
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('show');
+    }
+  });
+});
+
+// Animate progress rings on load
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.progress-bar').forEach(bar => {
+    const offset = bar.style.strokeDashoffset;
+    bar.style.strokeDashoffset = '339.292';
+    setTimeout(() => {
+      bar.style.strokeDashoffset = offset;
+    }, 100);
+  });
+});
+</script>
+{% endblock %}

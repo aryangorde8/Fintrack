@@ -12,12 +12,12 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, F
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from django.conf import settings
 
-from .models import Budget, Transaction, Notification
+from .models import Budget, Transaction, Notification, SavingsGoal
 
 # AI Receipt Scanning
 def scan_receipt_with_ai(image_data):
@@ -421,3 +421,214 @@ def download_pdf(request):
     p.showPage()
     p.save()
     return response
+
+
+# ============================================
+# SAVINGS GOALS VIEWS
+# ============================================
+
+@login_required(login_url='/api/web/login/')
+def goals_view(request):
+    """View and manage savings goals"""
+    user = request.user
+    
+    if request.method == 'POST':
+        action = request.POST.get('action', 'create')
+        
+        if action == 'create':
+            name = request.POST.get('name', '').strip()
+            if not name:
+                messages.error(request, 'Please provide a name for your goal.')
+                return redirect('api:web-goals')
+            
+            try:
+                target_amount = Decimal(request.POST.get('target_amount', '0'))
+                current_amount = Decimal(request.POST.get('current_amount', '0'))
+            except (TypeError, ValueError, InvalidOperation):
+                messages.error(request, 'Please provide valid amounts.')
+                return redirect('api:web-goals')
+            
+            icon = request.POST.get('icon', '💰')
+            color = request.POST.get('color', '#6366f1')
+            deadline = request.POST.get('deadline') or None
+            
+            SavingsGoal.objects.create(
+                user=user,
+                name=name,
+                target_amount=target_amount,
+                current_amount=current_amount,
+                icon=icon,
+                color=color,
+                deadline=deadline
+            )
+            messages.success(request, f'Goal "{name}" created successfully!')
+            
+        elif action == 'update':
+            goal_id = request.POST.get('goal_id')
+            try:
+                goal = SavingsGoal.objects.get(id=goal_id, user=user)
+                add_amount = Decimal(request.POST.get('add_amount', '0'))
+                goal.current_amount += add_amount
+                goal.save()
+                
+                if goal.is_completed:
+                    messages.success(request, f'🎉 Congratulations! You\'ve reached your "{goal.name}" goal!')
+                else:
+                    messages.success(request, f'Added ₹{add_amount} to "{goal.name}"!')
+            except (SavingsGoal.DoesNotExist, InvalidOperation):
+                messages.error(request, 'Could not update goal.')
+                
+        elif action == 'delete':
+            goal_id = request.POST.get('goal_id')
+            try:
+                goal = SavingsGoal.objects.get(id=goal_id, user=user)
+                goal_name = goal.name
+                goal.delete()
+                messages.success(request, f'Goal "{goal_name}" deleted.')
+            except SavingsGoal.DoesNotExist:
+                messages.error(request, 'Goal not found.')
+        
+        return redirect('api:web-goals')
+    
+    # GET request - display goals
+    goals = SavingsGoal.objects.filter(user=user).order_by('-created_at')
+    
+    # Calculate totals
+    total_target = sum(g.target_amount for g in goals)
+    total_saved = sum(g.current_amount for g in goals)
+    completed_goals = sum(1 for g in goals if g.is_completed)
+    
+    # Available icons and colors for the form
+    icons = ['💰', '🏠', '🚗', '✈️', '💻', '🎓', '💍', '🏥', '🛡️', '🎁', '🎯', '🏖️', '📱', '🎮', '👶']
+    colors = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6']
+    
+    context = {
+        'goals': goals,
+        'total_target': total_target,
+        'total_saved': total_saved,
+        'completed_goals': completed_goals,
+        'active_goals': goals.count() - completed_goals,
+        'icons': icons,
+        'colors': colors,
+    }
+    
+    return render(request, 'goals.html', context)
+
+
+@login_required(login_url='/api/web/login/')
+def get_spending_heatmap(request):
+    """API endpoint for spending heatmap data"""
+    user = request.user
+    
+    # Get last 365 days of spending data
+    start_date = timezone.now() - timedelta(days=365)
+    
+    daily_spending = (
+        Transaction.objects
+        .filter(user=user, type='expense', date__gte=start_date)
+        .annotate(day=TruncDate('date'))
+        .values('day')
+        .annotate(total=Sum('amount'))
+        .order_by('day')
+    )
+    
+    # Convert to format suitable for heatmap
+    heatmap_data = {}
+    for entry in daily_spending:
+        date_str = entry['day'].strftime('%Y-%m-%d')
+        heatmap_data[date_str] = float(entry['total'])
+    
+    return JsonResponse({'data': heatmap_data})
+
+
+@login_required(login_url='/api/web/login/')  
+def get_ai_insights(request):
+    """Generate AI-powered financial insights"""
+    user = request.user
+    insights = []
+    
+    # Get recent transaction data
+    last_30_days = timezone.now() - timedelta(days=30)
+    last_60_days = timezone.now() - timedelta(days=60)
+    
+    recent_expenses = Transaction.objects.filter(
+        user=user, type='expense', date__gte=last_30_days
+    )
+    previous_expenses = Transaction.objects.filter(
+        user=user, type='expense', date__gte=last_60_days, date__lt=last_30_days
+    )
+    
+    recent_total = recent_expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    previous_total = previous_expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    # Insight 1: Spending trend
+    if previous_total > 0:
+        change_pct = ((recent_total - previous_total) / previous_total) * 100
+        if change_pct > 20:
+            insights.append({
+                'type': 'warning',
+                'icon': '📈',
+                'title': 'Spending Spike Detected',
+                'message': f'Your spending increased by {abs(change_pct):.0f}% compared to last month. Consider reviewing your expenses.'
+            })
+        elif change_pct < -10:
+            insights.append({
+                'type': 'success',
+                'icon': '🎉',
+                'title': 'Great Savings!',
+                'message': f'You\'ve reduced spending by {abs(change_pct):.0f}% this month. Keep it up!'
+            })
+    
+    # Insight 2: Top spending category
+    top_category = (
+        recent_expenses
+        .values('category')
+        .annotate(total=Sum('amount'))
+        .order_by('-total')
+        .first()
+    )
+    
+    if top_category:
+        insights.append({
+            'type': 'info',
+            'icon': '🎯',
+            'title': 'Top Spending Category',
+            'message': f'{top_category["category"]} is your biggest expense at ₹{top_category["total"]:,.0f} this month.'
+        })
+    
+    # Insight 3: Budget alerts
+    over_budget = Budget.objects.filter(
+        user=user,
+        spent_amount__gt=F('limit_amount')
+    ).count()
+    
+    if over_budget > 0:
+        insights.append({
+            'type': 'danger',
+            'icon': '⚠️',
+            'title': 'Budget Alert',
+            'message': f'You\'ve exceeded {over_budget} budget(s) this period. Time to review!'
+        })
+    
+    # Insight 4: Savings tip
+    if recent_total > 0:
+        daily_avg = recent_total / 30
+        insights.append({
+            'type': 'tip',
+            'icon': '💡',
+            'title': 'Daily Spending Average',
+            'message': f'You spend ₹{daily_avg:,.0f} per day on average. Cutting ₹{daily_avg * 0.1:,.0f}/day could save ₹{daily_avg * 0.1 * 30:,.0f}/month!'
+        })
+    
+    # Insight 5: Goal progress (if goals exist)
+    active_goals = SavingsGoal.objects.filter(user=user, current_amount__lt=F('target_amount'))
+    if active_goals.exists():
+        closest_goal = min(active_goals, key=lambda g: g.remaining_amount)
+        insights.append({
+            'type': 'goal',
+            'icon': '🎯',
+            'title': 'Almost There!',
+            'message': f'You\'re ₹{closest_goal.remaining_amount:,.0f} away from your "{closest_goal.name}" goal!'
+        })
+    
+    return JsonResponse({'insights': insights})
