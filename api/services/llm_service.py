@@ -39,12 +39,14 @@ def _get_gemini_model():
             logger.warning("GEMINI_API_KEY not configured")
             return None
         genai.configure(api_key=api_key)
-        return genai.GenerativeModel('gemini-pro-vision')
+        # Use gemini-1.5-flash which supports vision
+        return genai.GenerativeModel('models/gemini-1.5-flash')
     except ImportError as e:
         logger.error(f"google-generativeai package not installed: {e}")
         return None
     except Exception as e:
         logger.error(f"Gemini init error: {type(e).__name__} - {str(e)}")
+        return None
 
 
 def generate_insights(prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
