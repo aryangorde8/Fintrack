@@ -519,88 +519,85 @@ def get_ai_insights(request):
             'over_budget_count': over_budget,
             'daily_avg': float(recent_total / 30) if recent_total > 0 else 0
         }
-    
-    # Check if user wants AI-generated insight (POST with prompt)
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            user_prompt = data.get('prompt', '').strip()
-            
-            # Validate input
-            if not user_prompt:
-                return JsonResponse({'error': 'No prompt provided'}, status=400)
-            if len(user_prompt) > 500:
-                return JsonResponse({'error': 'Prompt too long (max 500 chars)'}, status=400)
-            
-            logger.info(f"AI insight request from user {user.username}")
-            
-            # Generate AI insight
-            ai_response = generate_insights(user_prompt, context)
-            
-            return JsonResponse({
-                'success': True,
-                'insight': ai_response,
-                'context': context
+        
+        # Check if user wants AI-generated insight (POST with prompt)
+        if request.method == 'POST':
+            try:
+                data = json.loads(request.body)
+                user_prompt = data.get('prompt', '').strip()
+                
+                if not user_prompt:
+                    return JsonResponse({'error': 'No prompt provided'}, status=400)
+                if len(user_prompt) > 500:
+                    return JsonResponse({'error': 'Prompt too long (max 500 chars)'}, status=400)
+                
+                logger.info(f"AI insight request from user {user.username}")
+                ai_response = generate_insights(user_prompt, context)
+                
+                return JsonResponse({
+                    'success': True,
+                    'insight': ai_response,
+                    'context': context
+                })
+                
+            except json.JSONDecodeError:
+                return JsonResponse({'error': 'Invalid JSON'}, status=400)
+            except Exception as e:
+                logger.error(f"AI insights error: {type(e).__name__}")
+                return JsonResponse({'error': 'Failed to generate insight'}, status=500)
+        
+        # GET request - return rule-based insights (fast, no API call)
+        if change_pct > 20:
+            insights.append({
+                'type': 'warning',
+                'icon': '📈',
+                'title': 'Spending Spike Detected',
+                'message': f'Your spending increased by {abs(change_pct):.0f}% compared to last month. Consider reviewing your expenses.'
             })
-            
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except Exception as e:
-            logger.error(f"AI insights error: {type(e).__name__}")
-            return JsonResponse({'error': 'Failed to generate insight'}, status=500)
-    
-    # GET request - return rule-based insights (fast, no API call)
-    if change_pct > 20:
-        insights.append({
-            'type': 'warning',
-            'icon': '📈',
-            'title': 'Spending Spike Detected',
-            'message': f'Your spending increased by {abs(change_pct):.0f}% compared to last month. Consider reviewing your expenses.'
-        })
-    elif change_pct < -10:
-        insights.append({
-            'type': 'success',
-            'icon': '🎉',
-            'title': 'Great Savings!',
-            'message': f'You\'ve reduced spending by {abs(change_pct):.0f}% this month. Keep it up!'
-        })
-    
-    if top_category:
-        insights.append({
-            'type': 'info',
-            'icon': '🎯',
-            'title': 'Top Spending Category',
-            'message': f'{top_category["category"]} is your biggest expense at ₹{top_category["total"]:,.0f} this month.'
-        })
-    
-    if over_budget > 0:
-        insights.append({
-            'type': 'danger',
-            'icon': '⚠️',
-            'title': 'Budget Alert',
-            'message': f'You\'ve exceeded {over_budget} budget(s) this period. Time to review!'
-        })
-    
-    if recent_total > 0:
-        daily_avg = recent_total / 30
-        insights.append({
-            'type': 'tip',
-            'icon': '💡',
-            'title': 'Daily Spending Average',
-            'message': f'You spend ₹{daily_avg:,.0f} per day on average. Cutting ₹{daily_avg * 0.1:,.0f}/day could save ₹{daily_avg * 0.1 * 30:,.0f}/month!'
-        })
-    
-    # Goal progress
-    active_goals = SavingsGoal.objects.filter(user=user, current_amount__lt=F('target_amount'))
-    if active_goals.exists():
-        closest_goal = min(active_goals, key=lambda g: g.remaining_amount)
-        insights.append({
-            'type': 'goal',
-            'icon': '🎯',
-            'title': 'Almost There!',
-            'message': f'You\'re ₹{closest_goal.remaining_amount:,.0f} away from your "{closest_goal.name}" goal!'
-        })
-    
+        elif change_pct < -10:
+            insights.append({
+                'type': 'success',
+                'icon': '🎉',
+                'title': 'Great Savings!',
+                'message': f'You\'ve reduced spending by {abs(change_pct):.0f}% this month. Keep it up!'
+            })
+        
+        if top_category:
+            insights.append({
+                'type': 'info',
+                'icon': '🎯',
+                'title': 'Top Spending Category',
+                'message': f'{top_category["category"]} is your biggest expense at ₹{top_category["total"]:,.0f} this month.'
+            })
+        
+        if over_budget > 0:
+            insights.append({
+                'type': 'danger',
+                'icon': '⚠️',
+                'title': 'Budget Alert',
+                'message': f'You\'ve exceeded {over_budget} budget(s) this period. Time to review!'
+            })
+        
+        if recent_total > 0:
+            daily_avg = recent_total / 30
+            insights.append({
+                'type': 'tip',
+                'icon': '💡',
+                'title': 'Daily Spending Average',
+                'message': f'You spend ₹{daily_avg:,.0f} per day on average. Cutting ₹{daily_avg * 0.1:,.0f}/day could save ₹{daily_avg * 0.1 * 30:,.0f}/month!'
+            })
+        
+        # Goal progress
+        active_goals = SavingsGoal.objects.filter(user=user, current_amount__lt=F('target_amount'))
+        if active_goals.exists():
+            closest_goal = min(active_goals, key=lambda g: g.remaining_amount)
+            insights.append({
+                'type': 'goal',
+                'icon': '🎯',
+                'title': 'Almost There!',
+                'message': f'You\'re ₹{closest_goal.remaining_amount:,.0f} away from your "{closest_goal.name}" goal!'
+            })
+        
         return JsonResponse({'insights': insights, 'context': context})
     
     except Exception as e:
