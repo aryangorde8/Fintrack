@@ -10,6 +10,6 @@ requests
 PyJWT
 dj-database-url
 psycopg2-binary
-google-generativeai
+google-genai
 python-dotenv
 openai>=1.0.0

@@ -29,20 +29,19 @@ def _get_openai_client():
         return None
 
 
-def _get_gemini_model():
-    """Get Gemini model with API key from environment (fallback for receipt scanning)."""
+def _get_gemini_client():
+    """Get Gemini client with API key from environment (fallback for receipt scanning)."""
     try:
-        import google.generativeai as genai
+        from google import genai
         api_key = os.getenv('GEMINI_API_KEY', '')
         logger.info(f"GEMINI_API_KEY present: {bool(api_key)}, length: {len(api_key) if api_key else 0}")
         if not api_key:
             logger.warning("GEMINI_API_KEY not configured")
             return None
-        genai.configure(api_key=api_key)
-        # Use gemini-1.5-flash which supports vision
-        return genai.GenerativeModel('models/gemini-1.5-flash')
+        client = genai.Client(api_key=api_key)
+        return client
     except ImportError as e:
-        logger.error(f"google-generativeai package not installed: {e}")
+        logger.error(f"google-genai package not installed: {e}")
         return None
     except Exception as e:
         logger.error(f"Gemini init error: {type(e).__name__} - {str(e)}")
@@ -227,12 +226,12 @@ Return ONLY valid JSON. Focus on TOTAL amount."""
 
 def _scan_with_gemini(image_data: str) -> Dict[str, Any]:
     """Scan receipt using Google Gemini."""
-    model = _get_gemini_model()
-    if not model:
+    client = _get_gemini_client()
+    if not client:
         return {'success': True, 'demo_mode': True, 'data': {}}
     
     try:
-        import google.generativeai as genai
+        from google.genai import types
         from PIL import Image
         import io
         
@@ -248,9 +247,15 @@ Return ONLY valid JSON. Focus on TOTAL amount."""
         logger.info("Calling Gemini API for receipt scan")
         
         image_bytes = base64.b64decode(image_data)
-        image = Image.open(io.BytesIO(image_bytes))
         
-        response = model.generate_content([prompt, image])
+        # Use the new google-genai SDK format
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[
+                types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
+                prompt
+            ]
+        )
         
         response_text = response.text.strip()
         
