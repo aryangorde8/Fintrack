@@ -250,7 +250,7 @@ Return ONLY valid JSON. Focus on TOTAL amount."""
         
         # Use the new google-genai SDK format
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3.0-flash",
             contents=[
                 types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
                 prompt
