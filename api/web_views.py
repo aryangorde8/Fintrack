@@ -49,6 +49,20 @@ def scan_receipt(request):
         logger.error(f"Receipt scan error: {type(e).__name__}")
         return JsonResponse({'success': False, 'error': 'Failed to process receipt'})
 
+
+def debug_env(request):
+    """Debug endpoint to check environment variables (temporary)."""
+    gemini_key = os.getenv('GEMINI_API_KEY', '')
+    openai_key = os.getenv('OPENAI_API_KEY', '')
+    return JsonResponse({
+        'gemini_configured': bool(gemini_key),
+        'gemini_key_length': len(gemini_key) if gemini_key else 0,
+        'gemini_key_prefix': gemini_key[:10] + '...' if gemini_key and len(gemini_key) > 10 else 'NOT SET',
+        'openai_configured': bool(openai_key),
+        'openai_key_length': len(openai_key) if openai_key else 0,
+    })
+
+
 @csrf_exempt
 def login_view(request):
     if request.method == 'POST':

@@ -8,7 +8,7 @@ from .views import (
 from .web_views import (
     login_view, dashboard, budgets_view, transactions_view, 
     report_view, download_csv, download_pdf, scan_receipt,
-    goals_view, get_spending_heatmap, get_ai_insights
+    goals_view, get_spending_heatmap, get_ai_insights, debug_env
 )
 
 app_name = 'api'
@@ -37,4 +37,5 @@ urlpatterns = [
     path('web/scan-receipt/', scan_receipt, name='web-scan-receipt'),
     path('web/api/heatmap/', get_spending_heatmap, name='web-heatmap'),
     path('web/api/insights/', get_ai_insights, name='web-insights'),
+    path('web/debug-env/', debug_env, name='debug-env'),
 ]
