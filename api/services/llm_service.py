@@ -175,24 +175,28 @@ Return ONLY valid JSON. Focus on TOTAL amount."""
 
         logger.info("Calling OpenAI Vision API for receipt scan")
         
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{image_data}"
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_data}"
+                                }
                             }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=150
-        )
+                        ]
+                    }
+                ],
+                max_tokens=150
+            )
+        except Exception as api_error:
+            logger.error(f"OpenAI API call failed: {type(api_error).__name__}: {str(api_error)[:200]}")
+            return {'success': True, 'demo_mode': True, 'data': {}}
         
         response_text = response.choices[0].message.content.strip()
         

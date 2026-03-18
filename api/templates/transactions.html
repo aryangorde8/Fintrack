@@ -349,7 +349,7 @@
         document.getElementById('scanResult').classList.remove('hidden');
         
         if (result.demo_mode) {
-          alert('📌 Demo Mode: Set GEMINI_API_KEY environment variable for real AI scanning.');
+          alert('📌 Demo Mode: Set OPENAI_API_KEY or GEMINI_API_KEY environment variable for real AI scanning.');
         }
       } else {
         alert('Scan failed: ' + (result.error || 'Unknown error'));
