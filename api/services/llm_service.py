@@ -230,6 +230,10 @@ def _scan_with_gemini(image_data: str) -> Dict[str, Any]:
         return {'success': True, 'demo_mode': True, 'data': {}}
     
     try:
+        import google.generativeai as genai
+        from PIL import Image
+        import io
+        
         prompt = """Analyze this receipt/transaction screenshot and extract:
 {
     "amount": "total amount as number (e.g., 299.50)",
@@ -242,11 +246,9 @@ Return ONLY valid JSON. Focus on TOTAL amount."""
         logger.info("Calling Gemini API for receipt scan")
         
         image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
         
-        response = model.generate_content([
-            prompt,
-            {'mime_type': 'image/jpeg', 'data': image_bytes}
-        ])
+        response = model.generate_content([prompt, image])
         
         response_text = response.text.strip()
         
