@@ -39,7 +39,7 @@ def _get_gemini_model():
             logger.warning("GEMINI_API_KEY not configured")
             return None
         genai.configure(api_key=api_key)
-        return genai.GenerativeModel('gemini-1.5-flash')
+        return genai.GenerativeModel('gemini-pro-vision')
     except ImportError as e:
         logger.error(f"google-generativeai package not installed: {e}")
         return None
