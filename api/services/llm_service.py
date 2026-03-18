@@ -34,14 +34,17 @@ def _get_gemini_model():
     try:
         import google.generativeai as genai
         api_key = os.getenv('GEMINI_API_KEY', '')
+        logger.info(f"GEMINI_API_KEY present: {bool(api_key)}, length: {len(api_key) if api_key else 0}")
         if not api_key:
             logger.warning("GEMINI_API_KEY not configured")
             return None
         genai.configure(api_key=api_key)
-        return genai.GenerativeModel('gemini-2.0-flash')
-    except ImportError:
-        logger.error("google-generativeai package not installed")
+        return genai.GenerativeModel('gemini-1.5-flash')
+    except ImportError as e:
+        logger.error(f"google-generativeai package not installed: {e}")
         return None
+    except Exception as e:
+        logger.error(f"Gemini init error: {type(e).__name__} - {str(e)}")
 
 
 def generate_insights(prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
