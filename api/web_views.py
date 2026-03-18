@@ -2,6 +2,7 @@ import json
 import base64
 import os
 import re
+import logging
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -11,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Sum, Q, F
 from django.db.models.functions import TruncDate
@@ -18,95 +20,15 @@ from django.utils import timezone
 from django.conf import settings
 
 from .models import Budget, Transaction, Notification, SavingsGoal
+from .services.llm_service import scan_receipt_image, generate_insights
 
-# AI Receipt Scanning
-def scan_receipt_with_ai(image_data):
-    """
-    Scan receipt image using Google Gemini AI to extract transaction data.
-    Falls back to a demo mode if API key is not configured.
-    """
-    try:
-        import google.generativeai as genai
-        
-        # Use API key from Django settings
-        api_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
-        
-        if not api_key:
-            # Demo mode - return sample data for testing
-            return {
-                'success': True,
-                'demo_mode': True,
-                'data': {
-                    'amount': '299.00',
-                    'category': 'Shopping',
-                    'description': 'Demo: Sample transaction from receipt scan',
-                    'type': 'expense'
-                }
-            }
-        
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        
-        # Create prompt for receipt extraction
-        prompt = """Analyze this receipt/transaction screenshot and extract the following information in JSON format:
-        {
-            "amount": "total amount as a number (e.g., 299.50)",
-            "category": "best category guess from: Food, Shopping, Transportation, Entertainment, Utilities, Healthcare, Education, Other",
-            "description": "brief description of the transaction/items",
-            "type": "expense or income"
-        }
-        
-        If you cannot identify a field, use null. Only return the JSON, nothing else.
-        Focus on the TOTAL amount, not individual items."""
-        
-        # Decode base64 image
-        if ',' in image_data:
-            image_data = image_data.split(',')[1]
-        
-        image_bytes = base64.b64decode(image_data)
-        
-        response = model.generate_content([
-            prompt,
-            {'mime_type': 'image/jpeg', 'data': image_bytes}
-        ])
-        
-        # Parse response
-        response_text = response.text.strip()
-        # Remove markdown code blocks if present
-        if response_text.startswith('```'):
-            response_text = re.sub(r'^```json?\s*', '', response_text)
-            response_text = re.sub(r'\s*```$', '', response_text)
-        
-        data = json.loads(response_text)
-        
-        return {
-            'success': True,
-            'demo_mode': False,
-            'data': data
-        }
-        
-    except ImportError:
-        return {
-            'success': True,
-            'demo_mode': True,
-            'data': {
-                'amount': '150.00',
-                'category': 'Food',
-                'description': 'Demo mode: Install google-generativeai for AI scanning',
-                'type': 'expense'
-            }
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': str(e)
-        }
+logger = logging.getLogger(__name__)
 
 
 @csrf_exempt
 @login_required(login_url='/api/web/login/')
 def scan_receipt(request):
-    """Handle receipt image upload and AI scanning."""
+    """Handle receipt image upload and AI scanning via secure service layer."""
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid method'})
     
@@ -117,11 +39,15 @@ def scan_receipt(request):
         if not image_data:
             return JsonResponse({'success': False, 'error': 'No image provided'})
         
-        result = scan_receipt_with_ai(image_data)
+        logger.info(f"Receipt scan request from user {request.user.username}")
+        result = scan_receipt_image(image_data)
         return JsonResponse(result)
         
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        logger.error(f"Receipt scan error: {type(e).__name__}")
+        return JsonResponse({'success': False, 'error': 'Failed to process receipt'})
 
 @csrf_exempt
 def login_view(request):
@@ -542,8 +468,9 @@ def get_spending_heatmap(request):
 
 
 @login_required(login_url='/api/web/login/')  
+@require_http_methods(["GET", "POST"])
 def get_ai_insights(request):
-    """Generate AI-powered financial insights"""
+    """Generate AI-powered financial insights - uses OpenAI when available."""
     user = request.user
     insights = []
     
@@ -561,25 +488,12 @@ def get_ai_insights(request):
     recent_total = recent_expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
     previous_total = previous_expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
     
-    # Insight 1: Spending trend
+    # Calculate spending change
+    change_pct = 0
     if previous_total > 0:
-        change_pct = ((recent_total - previous_total) / previous_total) * 100
-        if change_pct > 20:
-            insights.append({
-                'type': 'warning',
-                'icon': '📈',
-                'title': 'Spending Spike Detected',
-                'message': f'Your spending increased by {abs(change_pct):.0f}% compared to last month. Consider reviewing your expenses.'
-            })
-        elif change_pct < -10:
-            insights.append({
-                'type': 'success',
-                'icon': '🎉',
-                'title': 'Great Savings!',
-                'message': f'You\'ve reduced spending by {abs(change_pct):.0f}% this month. Keep it up!'
-            })
+        change_pct = float(((recent_total - previous_total) / previous_total) * 100)
     
-    # Insight 2: Top spending category
+    # Get top category
     top_category = (
         recent_expenses
         .values('category')
@@ -587,6 +501,68 @@ def get_ai_insights(request):
         .order_by('-total')
         .first()
     )
+    
+    # Budget alerts
+    over_budget = Budget.objects.filter(
+        user=user,
+        spent_amount__gt=F('limit_amount')
+    ).count()
+    
+    # Build context for AI
+    context = {
+        'recent_total': float(recent_total),
+        'previous_total': float(previous_total),
+        'spending_change_pct': change_pct,
+        'top_category': top_category['category'] if top_category else None,
+        'top_category_amount': float(top_category['total']) if top_category else 0,
+        'over_budget_count': over_budget,
+        'daily_avg': float(recent_total / 30) if recent_total > 0 else 0
+    }
+    
+    # Check if user wants AI-generated insight (POST with prompt)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_prompt = data.get('prompt', '').strip()
+            
+            # Validate input
+            if not user_prompt:
+                return JsonResponse({'error': 'No prompt provided'}, status=400)
+            if len(user_prompt) > 500:
+                return JsonResponse({'error': 'Prompt too long (max 500 chars)'}, status=400)
+            
+            logger.info(f"AI insight request from user {user.username}")
+            
+            # Generate AI insight
+            ai_response = generate_insights(user_prompt, context)
+            
+            return JsonResponse({
+                'success': True,
+                'insight': ai_response,
+                'context': context
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.error(f"AI insights error: {type(e).__name__}")
+            return JsonResponse({'error': 'Failed to generate insight'}, status=500)
+    
+    # GET request - return rule-based insights (fast, no API call)
+    if change_pct > 20:
+        insights.append({
+            'type': 'warning',
+            'icon': '📈',
+            'title': 'Spending Spike Detected',
+            'message': f'Your spending increased by {abs(change_pct):.0f}% compared to last month. Consider reviewing your expenses.'
+        })
+    elif change_pct < -10:
+        insights.append({
+            'type': 'success',
+            'icon': '🎉',
+            'title': 'Great Savings!',
+            'message': f'You\'ve reduced spending by {abs(change_pct):.0f}% this month. Keep it up!'
+        })
     
     if top_category:
         insights.append({
@@ -596,12 +572,6 @@ def get_ai_insights(request):
             'message': f'{top_category["category"]} is your biggest expense at ₹{top_category["total"]:,.0f} this month.'
         })
     
-    # Insight 3: Budget alerts
-    over_budget = Budget.objects.filter(
-        user=user,
-        spent_amount__gt=F('limit_amount')
-    ).count()
-    
     if over_budget > 0:
         insights.append({
             'type': 'danger',
@@ -610,7 +580,6 @@ def get_ai_insights(request):
             'message': f'You\'ve exceeded {over_budget} budget(s) this period. Time to review!'
         })
     
-    # Insight 4: Savings tip
     if recent_total > 0:
         daily_avg = recent_total / 30
         insights.append({
@@ -620,7 +589,7 @@ def get_ai_insights(request):
             'message': f'You spend ₹{daily_avg:,.0f} per day on average. Cutting ₹{daily_avg * 0.1:,.0f}/day could save ₹{daily_avg * 0.1 * 30:,.0f}/month!'
         })
     
-    # Insight 5: Goal progress (if goals exist)
+    # Goal progress
     active_goals = SavingsGoal.objects.filter(user=user, current_amount__lt=F('target_amount'))
     if active_goals.exists():
         closest_goal = min(active_goals, key=lambda g: g.remaining_amount)
@@ -631,4 +600,4 @@ def get_ai_insights(request):
             'message': f'You\'re ₹{closest_goal.remaining_amount:,.0f} away from your "{closest_goal.name}" goal!'
         })
     
-    return JsonResponse({'insights': insights})
+    return JsonResponse({'insights': insights, 'context': context})

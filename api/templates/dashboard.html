@@ -35,6 +35,144 @@
   </div>
 </div>
 
+<!-- AI Financial Assistant -->
+<div class="ai-assistant-widget">
+  <div class="ai-assistant-header">
+    <span class="ai-icon">🤖</span>
+    <h3>AI Financial Assistant</h3>
+  </div>
+  <div class="ai-chat-container">
+    <div class="ai-response" id="aiResponse">
+      <p>Ask me anything about your finances! I can help with budgeting tips, spending analysis, and savings advice.</p>
+    </div>
+    <form class="ai-input-form" onsubmit="askAI(event)">
+      <input type="text" id="aiPrompt" placeholder="e.g., How can I save more money?" maxlength="500" required>
+      <button type="submit" class="btn-ai" id="aiSubmitBtn">
+        <span class="btn-text">Ask AI</span>
+        <span class="btn-loading" style="display:none;">⏳</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+.ai-assistant-widget {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.ai-assistant-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.ai-assistant-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.ai-icon {
+  font-size: 1.5rem;
+}
+.ai-response {
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  min-height: 60px;
+}
+.ai-response p {
+  margin: 0;
+  line-height: 1.6;
+}
+.ai-input-form {
+  display: flex;
+  gap: 0.75rem;
+}
+.ai-input-form input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  background: rgba(0,0,0,0.2);
+  color: inherit;
+  font-size: 0.95rem;
+}
+.ai-input-form input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+.btn-ai {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.btn-ai:hover {
+  transform: translateY(-2px);
+}
+.btn-ai:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+</style>
+
+<script>
+async function askAI(event) {
+  event.preventDefault();
+  const prompt = document.getElementById('aiPrompt').value.trim();
+  const responseDiv = document.getElementById('aiResponse');
+  const submitBtn = document.getElementById('aiSubmitBtn');
+  const btnText = submitBtn.querySelector('.btn-text');
+  const btnLoading = submitBtn.querySelector('.btn-loading');
+  
+  if (!prompt) return;
+  
+  // Show loading state
+  submitBtn.disabled = true;
+  btnText.style.display = 'none';
+  btnLoading.style.display = 'inline';
+  responseDiv.innerHTML = '<p>🤔 Thinking...</p>';
+  
+  try {
+    const response = await fetch('/api/web/api/insights/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ prompt: prompt })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.insight) {
+      responseDiv.innerHTML = `<p>💡 ${data.insight}</p>`;
+    } else if (data.error) {
+      responseDiv.innerHTML = `<p>⚠️ ${data.error}</p>`;
+    } else {
+      responseDiv.innerHTML = '<p>⚠️ Could not generate insight. Try again.</p>';
+    }
+  } catch (error) {
+    responseDiv.innerHTML = '<p>⚠️ Network error. Please try again.</p>';
+  } finally {
+    // Reset button
+    submitBtn.disabled = false;
+    btnText.style.display = 'inline';
+    btnLoading.style.display = 'none';
+  }
+}
+</script>
+
 <div class="kpi-grid stagger">
   <div class="kpi-card income">
     <div class="kpi-icon">💰</div>
