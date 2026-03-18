@@ -471,53 +471,54 @@ def get_spending_heatmap(request):
 @require_http_methods(["GET", "POST"])
 def get_ai_insights(request):
     """Generate AI-powered financial insights - uses OpenAI when available."""
-    user = request.user
-    insights = []
-    
-    # Get recent transaction data
-    last_30_days = timezone.now() - timedelta(days=30)
-    last_60_days = timezone.now() - timedelta(days=60)
-    
-    recent_expenses = Transaction.objects.filter(
-        user=user, type='expense', date__gte=last_30_days
-    )
-    previous_expenses = Transaction.objects.filter(
-        user=user, type='expense', date__gte=last_60_days, date__lt=last_30_days
-    )
-    
-    recent_total = recent_expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
-    previous_total = previous_expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
-    
-    # Calculate spending change
-    change_pct = 0
-    if previous_total > 0:
-        change_pct = float(((recent_total - previous_total) / previous_total) * 100)
-    
-    # Get top category
-    top_category = (
-        recent_expenses
-        .values('category')
-        .annotate(total=Sum('amount'))
-        .order_by('-total')
-        .first()
-    )
-    
-    # Budget alerts
-    over_budget = Budget.objects.filter(
-        user=user,
-        spent_amount__gt=F('limit_amount')
-    ).count()
-    
-    # Build context for AI
-    context = {
-        'recent_total': float(recent_total),
-        'previous_total': float(previous_total),
-        'spending_change_pct': change_pct,
-        'top_category': top_category['category'] if top_category else None,
-        'top_category_amount': float(top_category['total']) if top_category else 0,
-        'over_budget_count': over_budget,
-        'daily_avg': float(recent_total / 30) if recent_total > 0 else 0
-    }
+    try:
+        user = request.user
+        insights = []
+        
+        # Get recent transaction data
+        last_30_days = timezone.now() - timedelta(days=30)
+        last_60_days = timezone.now() - timedelta(days=60)
+        
+        recent_expenses = Transaction.objects.filter(
+            user=user, type='expense', date__gte=last_30_days
+        )
+        previous_expenses = Transaction.objects.filter(
+            user=user, type='expense', date__gte=last_60_days, date__lt=last_30_days
+        )
+        
+        recent_total = recent_expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        previous_total = previous_expenses.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        
+        # Calculate spending change
+        change_pct = 0
+        if previous_total > 0:
+            change_pct = float(((recent_total - previous_total) / previous_total) * 100)
+        
+        # Get top category
+        top_category = (
+            recent_expenses
+            .values('category')
+            .annotate(total=Sum('amount'))
+            .order_by('-total')
+            .first()
+        )
+        
+        # Budget alerts
+        over_budget = Budget.objects.filter(
+            user=user,
+            spent_amount__gt=F('limit_amount')
+        ).count()
+        
+        # Build context for AI
+        context = {
+            'recent_total': float(recent_total),
+            'previous_total': float(previous_total),
+            'spending_change_pct': change_pct,
+            'top_category': top_category['category'] if top_category else None,
+            'top_category_amount': float(top_category['total']) if top_category else 0,
+            'over_budget_count': over_budget,
+            'daily_avg': float(recent_total / 30) if recent_total > 0 else 0
+        }
     
     # Check if user wants AI-generated insight (POST with prompt)
     if request.method == 'POST':
@@ -600,4 +601,16 @@ def get_ai_insights(request):
             'message': f'You\'re ₹{closest_goal.remaining_amount:,.0f} away from your "{closest_goal.name}" goal!'
         })
     
-    return JsonResponse({'insights': insights, 'context': context})
+        return JsonResponse({'insights': insights, 'context': context})
+    
+    except Exception as e:
+        logger.error(f"Error in get_ai_insights: {type(e).__name__}: {str(e)}")
+        return JsonResponse({
+            'insights': [{
+                'type': 'info',
+                'icon': '💡',
+                'title': 'Financial Tip',
+                'message': 'Track your expenses regularly to build better financial habits!'
+            }],
+            'context': {}
+        })
